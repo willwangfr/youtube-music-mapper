@@ -728,10 +728,38 @@ header h1 {
 }
 
 .songs-list .song-album {
-    display: block;
     color: #666;
     font-size: 0.75rem;
+}
+
+.songs-list .song-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin-top: 2px;
+}
+
+.songs-list .song-plays {
+    color: #1db954;
+    font-size: 0.7rem;
+    font-weight: 500;
+    background: rgba(29, 185, 84, 0.15);
+    padding: 1px 6px;
+    border-radius: 10px;
+}
+
+.songs-list .song-year {
+    color: #888;
+    font-size: 0.7rem;
+}
+
+.songs-list .song-views {
+    color: #3498db;
+    font-size: 0.7rem;
+    font-weight: 500;
+    background: rgba(52, 152, 219, 0.15);
+    padding: 1px 6px;
+    border-radius: 10px;
 }
 
 #legend {
@@ -1079,6 +1107,132 @@ header h1 {
 
 .bridge-card .bridge-arrow {
     color: #666;
+}
+
+/* Set Builder Songs */
+.set-artist-block {
+    margin-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 10px;
+}
+
+.set-artist-block:last-child {
+    border-bottom: none;
+}
+
+.set-songs {
+    margin-left: 20px;
+    margin-top: 5px;
+}
+
+.set-song-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    color: #aaa;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.2s, color 0.2s;
+}
+
+.set-song-item:hover {
+    background: rgba(29, 185, 84, 0.2);
+    color: #1db954;
+}
+
+.set-song-item .play-icon {
+    color: #1db954;
+    font-size: 0.65rem;
+}
+
+.set-song-item .song-title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.set-song-item .song-year-badge {
+    color: #666;
+    font-size: 0.65rem;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+
+/* DJ Set display with songs */
+.set-stats {
+    font-size: 0.75rem;
+    color: #a29bfe;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.dj-set-item-block {
+    margin-bottom: 8px;
+}
+
+.set-songs-mini {
+    margin-left: 15px;
+    margin-top: 3px;
+}
+
+.set-song-mini {
+    font-size: 0.7rem;
+    color: #888;
+    padding: 2px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.set-song-mini.more {
+    color: #666;
+    font-style: italic;
+}
+
+/* Song-based DJ Set display */
+.dj-set-song-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    margin-bottom: 4px;
+}
+
+.dj-set-song-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.set-song-num {
+    color: #666;
+    font-size: 0.75rem;
+    min-width: 20px;
+}
+
+.set-song-info {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.set-song-title {
+    display: block;
+    font-size: 0.8rem;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.set-song-artist {
+    display: block;
+    font-size: 0.7rem;
+    color: #888;
 }
 
 /* Nicotine Export Modal */

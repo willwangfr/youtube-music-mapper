@@ -89,7 +89,8 @@ class YTMusicClient:
                     "title": t.get("title", ""),
                     "artists": [{"id": a.get("id", ""), "name": a.get("name", "")} for a in t.get("artists", [])],
                     "album": t.get("album", {}).get("name", "") if t.get("album") else "",
-                    "duration": t.get("duration", "")
+                    "duration": t.get("duration", ""),
+                    "year": t.get("year", "")  # Release year if available
                 }
                 for t in tracks
             ]

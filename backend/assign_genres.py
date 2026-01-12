@@ -544,6 +544,303 @@ ARTIST_GENRES = {
     'cade clair': 'Pop/EDM',
     'A Little Sound': 'Pop/EDM',
     'DerekD2': 'Pop/EDM',
+
+    # Pop / Pop Rock
+    'Emma Stone': 'Pop',
+    'Chappell Roan': 'Pop',
+    'Kim Petras': 'Pop',
+    'Kelly Clarkson': 'Pop',
+    'Paramore': 'Rock',
+    'fun.': 'Pop',
+    'Saint Motel': 'Pop',
+    'Benson Boone': 'Pop',
+    'Lewis Capaldi': 'Pop',
+    'The Script': 'Pop',
+    'Lily Allen': 'Pop',
+    'GAYLE': 'Pop',
+    'Charli xcx': 'Pop',
+    'MARINA': 'Pop',
+    'BØRNS': 'Pop',
+    'One Direction': 'Pop',
+    'Foster The People': 'Pop',
+    'Céline Dion': 'Pop',
+    'Mike Posner': 'Pop',
+    'Enrique Iglesias': 'Pop',
+    'Wham!': 'Pop',
+    'Bobby Helms': 'Pop',
+
+    # Hip-Hop / Rap
+    '6ix9ine': 'Hip-Hop',
+    'RXK Nephew': 'Hip-Hop',
+    'Saweetie': 'Hip-Hop',
+    'Outkast': 'Hip-Hop',
+    'Jeremih': 'Hip-Hop',
+    'Timbaland': 'Hip-Hop',
+    'Young M.A': 'Hip-Hop',
+    'Lil Wayne': 'Hip-Hop',
+    'Childish Gambino': 'Hip-Hop',
+    'Salt-N-Pepa': 'Hip-Hop',
+    'Jay Sean': 'Hip-Hop',
+    'SAINt JHN': 'Hip-Hop',
+    'Sheck Wes': 'Hip-Hop',
+    'Coolio': 'Hip-Hop',
+    'Hanumankind': 'Hip-Hop',
+
+    # Rock / Classic Rock
+    'Tears For Fears': 'Rock',
+    'Bruce Springsteen': 'Rock',
+    'System Of A Down': 'Rock',
+    'Papa Roach': 'Rock',
+    'Modest Mouse': 'Rock',
+    'Procol Harum': 'Rock',
+    'The Alan Parsons Project': 'Rock',
+    'The Police': 'Rock',
+    'The Rolling Stones': 'Rock',
+    'The Chemical Brothers': 'Electronic',
+    'The Jimi Hendrix Experience': 'Rock',
+    'Billy Joel': 'Rock',
+    'John Lennon': 'Rock',
+    'Lord Huron': 'Rock',
+
+    # K-Pop (verified)
+    'ILLIT': 'K-Pop',
+    'TRI.BE': 'K-Pop',
+    'FIFTY FIFTY': 'K-Pop',
+    'NMIXX': 'K-Pop',
+    'HYO': 'K-Pop',
+    'SUNMI': 'K-Pop',
+    'CHUNG HA': 'K-Pop',
+
+    # House / Tech House / Deep House
+    'CID': 'Tech House',
+    'Cloonee': 'Tech House',
+    'KREAM': 'Tech House',
+    'Curbi': 'Bass House',
+    'Modjo': 'House',
+    'SG Lewis': 'House',
+    'Flight Facilities': 'House',
+    'Breakbot': 'House',
+    'Bob Sinclar': 'House',
+    'Westend': 'Tech House',
+    'Boris Brejcha': 'Tech House',
+    'Amtrac': 'House',
+    'Matt Sassari': 'Tech House',
+    'Fatboy Slim': 'House',
+
+    # Dubstep / Bass (more)
+    'Space Laces': 'Dubstep/Bass',
+    'Monxx': 'Dubstep/Bass',
+    'INFEKT': 'Dubstep/Bass',
+    'Rooler': 'Dubstep/Bass',
+    'Lil Texas': 'Dubstep/Bass',
+
+    # Drum & Bass
+    'Feint': 'Drum & Bass',
+
+    # Future Bass / Melodic
+    'Cash Cash': 'Future Bass',
+    'Kidswaste': 'Future Bass',
+    'Manila Killa': 'Future Bass',
+    'Two Friends': 'Future Bass',
+    'Flamingosis': 'Future Bass',
+    'Skylar Spence': 'Future Bass',
+
+    # Electronic / Indie Electronic
+    '100 gecs': 'Electronic',
+    'Gesaffelstein': 'Electronic',
+    'Cobra Starship': 'Pop/EDM',
+
+    # Cinematic / Soundtrack
+    'Justin Hurwitz': 'Cinematic',
+    'Laurindo Almeida': 'Classical',
+    'Herb Alpert & The Tijuana Brass': 'Jazz',
+    'Emile Mosseri': 'Cinematic',
+    'Ryan Gosling': 'Cinematic',
+    'Seycara Orchestral': 'Cinematic',
+    'Masahiro Tokuda': 'Cinematic',
+
+    # Trap / Bass
+    'Juelz': 'Trap/Bass',
+    'LAYZ': 'Trap/Bass',
+
+    # Misc EDM
+    'Teriyaki Boyz': 'Hip-Hop',
+    'Caesars': 'Rock',
+    'Toploader': 'Rock',
+    'B.J. Thomas': 'Pop',
+
+    # More Pop / Mainstream
+    'Mia Martina': 'Pop',
+    'Surfaces': 'Pop',
+    'Stephen Sanchez': 'Pop',
+    'Michael Jackson': 'Pop',
+    '5 Seconds of Summer': 'Pop',
+    'Masked Wolf': 'Hip-Hop',
+    'America': 'Rock',
+    'Journey': 'Rock',
+    'Rupert Holmes': 'Pop',
+    'Nina Simone': 'Jazz',
+    'Flobots': 'Hip-Hop',
+    'B.o.B': 'Hip-Hop',
+    'MadeinTYO': 'Hip-Hop',
+    'Rob $tone': 'Hip-Hop',
+    'Panjabi MC': 'Hip-Hop',
+    'AUDREY NUNA': 'Hip-Hop',
+    'REI AMI': 'Hip-Hop',
+
+    # More House / Tech House
+    'Peggy Gou': 'Tech House',
+    'Sam Paganini': 'Tech House',
+    'Cherub': 'Electronic',
+
+    # More Electronic / EDM producers
+    'DripReport': 'Electronic',
+    'Dezko': 'Electronic',
+    'AYYBO': 'Electronic',
+    'NOTION': 'Electronic',
+    'Timecop1983': 'Electronic',
+    'C418': 'Electronic',
+    'Marconi Union': 'Electronic',
+    'JackStauber': 'Electronic',
+
+    # More Dubstep / Bass
+    'Bass Bangers': 'Dubstep/Bass',
+    'DXRTY': 'Dubstep/Bass',
+    'Discip': 'Dubstep/Bass',
+    'Kronus': 'Dubstep/Bass',
+    'Loudtech': 'Dubstep/Bass',
+
+    # More K-Pop
+    'QWER': 'K-Pop',
+    '타타타타 TATATATA': 'K-Pop',
+
+    # Cinematic / Soundtrack
+    'Jeremy Soule': 'Cinematic',
+    'The Elder Scrolls': 'Cinematic',
+    'Callie Hernandez': 'Cinematic',
+    'Sonoya Mizuno': 'Cinematic',
+    'Jessica Rothe': 'Cinematic',
+
+    # More misc
+    'Maher Zain': 'Pop',
+    'The Cataracs': 'Pop/EDM',
+    'Lotus': 'Electronic',
+    'SPYZR': 'Electronic',
+    'Dimitri K': 'Electronic',
+
+    # Web-searched genres
+    'Kalmi': 'Hip-Hop',
+    'piri & tommy': 'Drum & Bass',
+    'DubstepGutter': 'Dubstep/Bass',
+    'England Dan & John Ford Coley': 'Pop',
+    'MPH': 'UK House',
+
+    # Batch 1: Web-researched genres (January 2026)
+    # EDM / Electronic
+    'AYYBO': 'Tech House',
+    'HILLS': 'Tech House',
+    'Gaddi': 'Tech House',
+    'NOTION': 'UK House',
+    'K?D': 'Melodic Bass',
+    'k?d': 'Melodic Bass',
+    'Frizk': 'Electronic',
+
+    # K-Pop
+    'KISS OF LIFE': 'K-Pop',
+    'OH MY GIRL': 'K-Pop',
+    'BESTie': 'K-Pop',
+    'BESTie(베스티)': 'K-Pop',
+    'HUNTR/X': 'K-Pop',
+    'EJAE': 'K-Pop',
+
+    # Hip-Hop / R&B
+    'The Notorious B.I.G.': 'Hip-Hop',
+    'Mary J. Blige': 'R&B',
+    'Gym Class Heroes': 'Hip-Hop',
+    'Melly Mike': 'Hip-Hop',
+    'Robin Gan': 'Hip-Hop',
+
+    # Rock / Alternative
+    'Cage The Elephant': 'Rock',
+    'Portugal. The Man': 'Rock',
+    'Jimmy Eat World': 'Rock',
+    'The Moody Blues': 'Rock',
+    'Sixpence None The Richer': 'Rock',
+    'Los Campesinos!': 'Rock',
+
+    # Pop
+    'Lana Del Rey': 'Pop',
+    'Tones And I': 'Pop',
+    'Fitz and The Tantrums': 'Pop',
+    'a-ha': 'Pop',
+    'Corinne Bailey Rae': 'R&B',
+    'for KING & COUNTRY': 'Pop',
+
+    # Funk / Soul
+    'Earth, Wind & Fire': 'R&B',
+
+    # Comedy / Hip-Hop
+    'The Lonely Island': 'Hip-Hop',
+
+    # Classical
+    'Yo-Yo Ma': 'Classical',
+    'Camille Saint-Saëns': 'Classical',
+    'George Frideric Handel': 'Classical',
+    'Academy of St Martin in the Fields': 'Classical',
+    'English Chamber Orchestra': 'Classical',
+
+    # Batch 2: More web-researched genres (January 2026)
+    # EDM / Bass
+    'HOL!': 'Dubstep/Bass',
+    "it's murph": 'House',
+    'sma$her': 'Electronic',
+    'dropbangers.': 'Dubstep/Bass',
+    'Destination EDM!': 'Electronic',
+
+    # Hip-Hop / Rap
+    'Earl St. Clair': 'R&B',
+    'Turtle The Exiled': 'Hip-Hop',
+
+    # Classical
+    'Musica Clásica ': 'Classical',
+    'The San Miguel Master Chorale': 'Classical',
+    "The Disneyland Children's Chorus": 'Pop',
+
+    # Pop/EDM - Jay Phoenix integrates classical/jazz with pop/EDM
+    'Jay Phoenix ': 'Pop/EDM',
+
+    # Batch 3: Additional researched genres
+    # Comedy / Entertainment
+    "Conner O'Malley": 'Hip-Hop',  # Comedy/satire with hip-hop elements
+
+    # Cinematic / Soundtrack
+    'Tom Fox Catalog': 'Cinematic',  # Music library/soundtrack composer
+    'HA Composer UK': 'Cinematic',
+
+    # Electronic / EDM
+    'D-Jack': 'Electronic',
+    'Zap\'s Playlist': 'Electronic',
+    'Red Hot Lyric': 'Pop',  # Lyric video channel
+    'bear.': 'Electronic/Indie',  # Electronic/indie producer
+
+    # Channels and misc
+    'HMS & HSDM Student Council': 'Pop',  # Student organization
+
+    # Batch 4: Chinese artists and remaining
+    '郭思达': 'Cinematic',  # Chinese film/TV soundtrack composer
+    '张杰': 'Pop',  # Jason Zhang - Chinese pop singer
+    '黄禹臣': 'Pop',  # Chinese artist
+    '憂鬱': 'Pop',  # Chinese artist
+
+    # EDM-style usernames typically indicate electronic music producers
+    's l o w l y u w u': 'Electronic',  # Stylized EDM username
+    'geods sorèd': 'Electronic',
+    'Daryl-CummingZ': 'Electronic',
+    '擸佅SKAI ISYOURGOD': 'Electronic',  # EDM-style name
+    '闻人听書_': 'Electronic',  # Chinese EDM producer style name
+
+    # Arabic/Middle Eastern
+    'Shabab M.K.': 'Pop',  # Arabic music
 }
 
 # Pattern-based genre detection
@@ -559,6 +856,16 @@ GENRE_PATTERNS = [
     (r'\b(trap)\b', 'Trap/Bass'),
     (r'\b(k-?pop|korean pop)\b', 'K-Pop'),
     (r'\b(hip-?hop|rap)\b', 'Hip-Hop'),
+]
+
+# EDM producer name patterns (all caps, special chars, numbers)
+EDM_NAME_PATTERNS = [
+    r'^[A-Z0-9]{2,}$',  # ALL CAPS like NGHTMRE, SVDDEN DEATH
+    r'^[A-Z][a-z]+\s?[A-Z]+$',  # Mixed like Virtual Riot
+    r'[0-9]',  # Contains numbers like 1788-L, 100 gecs
+    r'[xX]{2,}',  # Contains xx like Marshmello
+    r'^DJ\s',  # Starts with DJ
+    r'\b(bass|beats|drop|wave|synth|audio|sound|music|remix)\b',  # EDM keywords
 ]
 
 
@@ -706,8 +1013,8 @@ def infer_genres_from_connections(graph_file: str, min_connections: int = 2):
             if top_genre == 'K-Pop':
                 continue
 
-            # Require 3+ connections AND >60% majority
-            if top_count >= 3 and top_count / total_conns > 0.6:
+            # Require 2+ connections AND >50% majority (more aggressive)
+            if top_count >= 2 and top_count / total_conns > 0.5:
                 node['genre'] = top_genre
                 changed += 1
 
@@ -788,6 +1095,42 @@ def assign_fallback_genre(graph_file: str):
         print(f"  {c:4d} - {g}")
 
 
+def assign_edm_by_name_pattern(graph_file: str):
+    """Assign 'Electronic' to artists with EDM-looking names."""
+
+    with open(graph_file, 'r') as f:
+        data = json.load(f)
+
+    changed = 0
+    for node in data['nodes']:
+        if node.get('genre') != 'Other':
+            continue
+
+        name = node.get('name', '')
+
+        # Check if name matches EDM patterns
+        for pattern in EDM_NAME_PATTERNS:
+            if re.search(pattern, name, re.IGNORECASE):
+                node['genre'] = 'Electronic'
+                changed += 1
+                break
+
+    with open(graph_file, 'w') as f:
+        json.dump(data, f, indent=2)
+
+    print(f"\nAssigned 'Electronic' to {changed} artists by name pattern")
+
+    # Count
+    genres = {}
+    for node in data['nodes']:
+        g = node.get('genre', 'Other')
+        genres[g] = genres.get(g, 0) + 1
+
+    still_other = genres.get('Other', 0)
+    total = len(data['nodes'])
+    print(f"Other: {still_other} ({still_other*100/total:.1f}%)")
+
+
 if __name__ == "__main__":
     assign_genres("../frontend/graph_data.json")
 
@@ -797,3 +1140,6 @@ if __name__ == "__main__":
 
     # Fallback for remaining connected artists
     assign_fallback_genre("../frontend/graph_data.json")
+
+    # Pattern-based fallback for EDM-looking names
+    assign_edm_by_name_pattern("../frontend/graph_data.json")

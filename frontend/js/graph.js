@@ -52,6 +52,8 @@ class MusicGraph {
             'Hip-Hop': '#fdcb6e',
             'Rock': '#b2bec3',
             'Cinematic': '#dfe6e9',
+            'House': '#2ecc71',
+            'Jazz': '#f1c40f',
             'Other': '#636e72',
             'default': '#555555'
         };
@@ -761,7 +763,11 @@ class MusicGraph {
                     ${songs.map(s => `
                         <li>
                             <span class="song-title">${s.title}</span>
-                            ${s.album ? `<span class="song-album">${s.album}</span>` : ''}
+                            <span class="song-meta">
+                                ${s.year ? `<span class="song-year">${s.year}</span>` : ''}
+                                ${s.views ? `<span class="song-views">${this.formatViews(s.views)}</span>` : ''}
+                                ${s.plays ? `<span class="song-plays">${s.plays}x</span>` : ''}
+                            </span>
                         </li>
                     `).join('')}
                 </ul>
@@ -1061,6 +1067,15 @@ function toggleDJPanel() {
     toggle.textContent = content.classList.contains('collapsed') ? '+' : '-';
 }
 
+// Utility methods
+MusicGraph.prototype.formatViews = function(views) {
+    if (!views) return '';
+    if (views >= 1000000000) return (views / 1000000000).toFixed(1) + 'B';
+    if (views >= 1000000) return (views / 1000000).toFixed(1) + 'M';
+    if (views >= 1000) return (views / 1000).toFixed(0) + 'K';
+    return views.toString();
+};
+
 // Add DJ methods to MusicGraph
 MusicGraph.prototype.findMixPath = function() {
     const fromInput = document.getElementById('mixFrom').value.trim().toLowerCase();
@@ -1256,15 +1271,37 @@ MusicGraph.prototype.buildSet = function() {
         set = this.buildGenreJourney(genre);
     }
 
-    results.innerHTML = set.map((artist, i) => `
-        <div class="dj-result-item" onclick="graph.addToSet('${artist.id}')">
-            <span class="artist-dot" style="background: ${this.getGenreColor(artist.genre)};"></span>
-            <div class="artist-info">
-                <div class="artist-name">${i + 1}. ${artist.name}</div>
-                <div class="artist-meta">${artist.genre} • ${artist.song_count || 0} songs</div>
+    // Build HTML with songs for each artist
+    let html = '';
+    set.forEach((artist, i) => {
+        const songs = artist.songs || [];
+        const topSongs = songs.slice(0, 3); // Show top 3 songs per artist
+
+        html += `
+            <div class="set-artist-block">
+                <div class="dj-result-item" onclick="graph.addToSet('${artist.id}')">
+                    <span class="artist-dot" style="background: ${this.getGenreColor(artist.genre)};"></span>
+                    <div class="artist-info">
+                        <div class="artist-name">${i + 1}. ${artist.name}</div>
+                        <div class="artist-meta">${artist.genre} • ${artist.song_count || 0} songs</div>
+                    </div>
+                </div>
+                ${topSongs.length > 0 ? `
+                    <div class="set-songs">
+                        ${topSongs.map(song => `
+                            <div class="set-song-item">
+                                <span class="play-icon" onclick="event.stopPropagation(); graph.playSong('${artist.name}', '${song.title.replace(/'/g, "\\'")}')">▶</span>
+                                <span class="song-title" onclick="graph.addSongToSet('${artist.id}', '${song.title.replace(/'/g, "\\'")}')">${song.title}</span>
+                                ${song.year ? `<span class="song-year-badge">${song.year}</span>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
             </div>
-        </div>
-    `).join('');
+        `;
+    });
+
+    results.innerHTML = html;
 };
 
 MusicGraph.prototype.buildEnergySet = function(startGenre, direction) {
@@ -1347,15 +1384,38 @@ MusicGraph.prototype.addToSet = function(artistId) {
     const artist = this.nodes.find(n => n.id === artistId);
     if (!artist) return;
 
-    // Check if already in set
-    if (this.djSet.find(a => a.id === artistId)) return;
-
-    this.djSet.push(artist);
+    // Add all songs from this artist to the set
+    const songs = artist.songs || [];
+    songs.forEach(song => {
+        this.djSet.push({
+            artistId: artist.id,
+            artistName: artist.name,
+            genre: artist.genre,
+            song: song
+        });
+    });
     this.updateSetDisplay();
 };
 
-MusicGraph.prototype.removeFromSet = function(artistId) {
-    this.djSet = this.djSet.filter(a => a.id !== artistId);
+MusicGraph.prototype.addSongToSet = function(artistId, songTitle) {
+    const artist = this.nodes.find(n => n.id === artistId);
+    if (!artist) return;
+
+    const song = (artist.songs || []).find(s => s.title === songTitle);
+    if (!song) return;
+
+    // Add this specific song to the set (allows duplicates for re-ordering)
+    this.djSet.push({
+        artistId: artist.id,
+        artistName: artist.name,
+        genre: artist.genre,
+        song: song
+    });
+    this.updateSetDisplay();
+};
+
+MusicGraph.prototype.removeFromSet = function(index) {
+    this.djSet.splice(index, 1);
     this.updateSetDisplay();
 };
 
@@ -1368,16 +1428,27 @@ MusicGraph.prototype.updateSetDisplay = function() {
     const container = document.getElementById('djSetList');
 
     if (this.djSet.length === 0) {
-        container.innerHTML = '<p class="dj-hint">Click artists to add to your set</p>';
+        container.innerHTML = '<p class="dj-hint">Click songs to add to your set</p>';
         return;
     }
 
-    container.innerHTML = this.djSet.map((artist, i) => `
-        <div class="dj-set-item">
-            <span>${i + 1}. ${artist.name}</span>
-            <button class="remove-btn" onclick="event.stopPropagation(); graph.removeFromSet('${artist.id}')">×</button>
-        </div>
-    `).join('');
+    let html = `<div class="set-stats">${this.djSet.length} songs</div>`;
+
+    html += this.djSet.map((item, i) => {
+        const song = item.song || {};
+        return `
+            <div class="dj-set-song-item">
+                <span class="set-song-num">${i + 1}.</span>
+                <div class="set-song-info">
+                    <span class="set-song-title">${song.title || 'Unknown'}</span>
+                    <span class="set-song-artist">${item.artistName}</span>
+                </div>
+                <button class="remove-btn" onclick="event.stopPropagation(); graph.removeFromSet(${i})">×</button>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = html;
 };
 
 MusicGraph.prototype.exportSet = function() {
@@ -1386,8 +1457,11 @@ MusicGraph.prototype.exportSet = function() {
         return;
     }
 
-    // Create text export
-    const text = this.djSet.map((a, i) => `${i + 1}. ${a.name} [${a.genre || 'Unknown'}]`).join('\n');
+    // Create text export with song-based format
+    const text = this.djSet.map((item, i) => {
+        const song = item.song || {};
+        return `${i + 1}. ${item.artistName} - ${song.title || 'Unknown'} [${item.genre || 'Unknown'}]`;
+    }).join('\n');
 
     // Copy to clipboard
     navigator.clipboard.writeText(text).then(() => {
@@ -1406,34 +1480,27 @@ MusicGraph.prototype.exportSet = function() {
 // Nicotine++ Export - exports songs in format for Soulseek searching
 MusicGraph.prototype.exportForNicotine = function() {
     if (this.djSet.length === 0) {
-        alert('Your set is empty! Add artists to export.');
+        alert('Your set is empty! Add songs to export.');
         return;
     }
 
-    // Collect all songs from artists in the set
+    // Build search terms from the flat song list
     const searchTerms = [];
-    const artistsWithSongs = [];
-    const artistsWithoutSongs = [];
+    const artistSet = new Set();
 
-    this.djSet.forEach(artist => {
-        const songs = artist.songs || [];
-        if (songs.length > 0) {
-            artistsWithSongs.push(artist.name);
-            songs.forEach(song => {
-                // Format: "Artist - Song Title [Album]" for better Soulseek search results
-                let term = `${artist.name} - ${song.title}`;
-                if (song.album && song.album.trim()) {
-                    term += ` [${song.album}]`;
-                }
-                searchTerms.push(term);
-            });
-        } else {
-            artistsWithoutSongs.push(artist.name);
+    this.djSet.forEach(item => {
+        const song = item.song || {};
+        artistSet.add(item.artistName);
+        // Format: "Artist - Song Title [Album]" for better Soulseek search results
+        let term = `${item.artistName} - ${song.title || 'Unknown'}`;
+        if (song.album && song.album.trim()) {
+            term += ` [${song.album}]`;
         }
+        searchTerms.push(term);
     });
 
     // Show export modal
-    this.showNicotineExportModal(searchTerms, artistsWithSongs, artistsWithoutSongs);
+    this.showNicotineExportModal(searchTerms, Array.from(artistSet), []);
 };
 
 MusicGraph.prototype.showNicotineExportModal = function(searchTerms, artistsWithSongs, artistsWithoutSongs) {
@@ -1651,31 +1718,38 @@ MusicGraph.prototype.showArtistPanel = function(artist) {
 
     // Stats
     const genreColor = artist.genre ? this.getGenreColor(artist.genre) : '#888';
+    const totalPlays = artist.total_plays || 0;
     document.getElementById('artistStats').innerHTML = `
         ${artist.genre ? `<p><span>Genre:</span> <span style="color: ${genreColor}; font-weight: bold;">${artist.genre}</span></p>` : ''}
         <p><span>Songs in library:</span> <span>${artist.song_count || 0}</span></p>
+        ${totalPlays > 0 ? `<p><span>Recent plays:</span> <span style="color: #1db954;">${totalPlays}</span></p>` : ''}
         <p><span>Type:</span> <span>${artist.in_library ? 'Library Artist' : 'Related Artist'}</span></p>
-        <p><span>Importance:</span> <span>${((artist.importance || 0) * 100).toFixed(1)}%</span></p>
         <p><span style="cursor: pointer; color: #48dbfb;" onclick="graph.addToSet('${artist.id}')">+ Add to DJ Set</span></p>
     `;
 
-    // Songs with play buttons
+    // Songs with play buttons, years, and play counts
     const songs = artist.songs || [];
     if (songs.length > 0) {
         document.getElementById('artistSongs').innerHTML = `
             <h4>Your Liked Songs (${songs.length})</h4>
             <ul class="songs-list">
-                ${songs.map(s => `
+                ${songs.map(s => {
+                    const yearStr = s.year ? ` (${s.year})` : '';
+                    const playsStr = s.plays > 0 ? `<span class="song-plays">${s.plays}x</span>` : '';
+                    return `
                     <li>
                         <button class="play-btn" onclick="graph.playSong('${encodeURIComponent(artist.name)}', '${encodeURIComponent(s.title)}')" title="Search on YouTube">
                             ▶
                         </button>
                         <div class="song-info">
-                            <span class="song-title">${s.title}</span>
-                            ${s.album ? `<span class="song-album">${s.album}</span>` : ''}
+                            <span class="song-title">${s.title}${yearStr}</span>
+                            <span class="song-meta">
+                                ${s.album ? `<span class="song-album">${s.album}</span>` : ''}
+                                ${playsStr}
+                            </span>
                         </div>
                     </li>
-                `).join('')}
+                `}).join('')}
             </ul>
         `;
     } else {
