@@ -9,6 +9,11 @@ from ytmusic_client import YTMusicClient, export_user_data
 from graph_builder import MusicGraphBuilder
 import os
 import json
+import requests
+import urllib.parse
+
+# Last.fm API - get your free key at https://www.last.fm/api/account/create
+LASTFM_API_KEY = os.environ.get('LASTFM_API_KEY', '')
 
 app = Flask(__name__, static_folder="../frontend")
 CORS(app)
@@ -145,6 +150,54 @@ def get_liked_songs():
 
     songs = client.get_liked_songs(limit=200)
     return jsonify({"songs": songs})
+
+
+@app.route("/api/similar/<artist_name>")
+def get_similar_artists(artist_name):
+    """Get similar artists from Last.fm API."""
+    if not LASTFM_API_KEY:
+        return jsonify({"error": "Last.fm API key not configured. Set LASTFM_API_KEY environment variable."}), 500
+
+    try:
+        # URL encode the artist name
+        encoded_name = urllib.parse.quote(artist_name)
+        url = f"http://ws.audioscrobbler.com/2.0/?method=artist.getsimilar&artist={encoded_name}&api_key={LASTFM_API_KEY}&format=json&limit=20"
+
+        response = requests.get(url, timeout=10)
+        data = response.json()
+
+        if 'error' in data:
+            return jsonify({"error": data.get('message', 'Artist not found')}), 404
+
+        similar = data.get('similarartists', {}).get('artist', [])
+
+        # Format the response
+        artists = []
+        for a in similar:
+            artists.append({
+                'name': a.get('name', ''),
+                'match': float(a.get('match', 0)),
+                'url': a.get('url', ''),
+                'image': next((img.get('#text') for img in a.get('image', []) if img.get('size') == 'medium'), '')
+            })
+
+        return jsonify({
+            'artist': artist_name,
+            'similar': artists
+        })
+    except requests.exceptions.Timeout:
+        return jsonify({"error": "Last.fm API timeout"}), 504
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/lastfm/status")
+def lastfm_status():
+    """Check if Last.fm API is configured."""
+    return jsonify({
+        "configured": bool(LASTFM_API_KEY),
+        "message": "Last.fm API ready" if LASTFM_API_KEY else "Set LASTFM_API_KEY to enable similar artists"
+    })
 
 
 # Demo mode with sample data

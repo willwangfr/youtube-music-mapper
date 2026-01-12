@@ -113,7 +113,9 @@ class MusicGraph {
             .force('center', d3.forceCenter(this.width / 2, this.height / 2))
             .force('collision', d3.forceCollide().radius(d => this.getNodeRadius(d) + 10))
             .force('cluster', this.clusterForce(0.15))
-            .force('separate', this.clusterSeparationForce(0.05));
+            .force('separate', this.clusterSeparationForce(0.05))
+            .alphaDecay(0.05)
+            .velocityDecay(0.4);
     }
 
     // Force to pull nodes in the same cluster together
@@ -499,8 +501,11 @@ class MusicGraph {
 
         this.simulation.force('link').links(this.links);
 
-        // Restart simulation
+        // Restart simulation and stop when settled
         this.simulation.alpha(1).restart();
+        this.simulation.on('end', () => {
+            console.log('Simulation settled - nodes are now stable');
+        });
 
         // Apply filters
         this.filterNodes();
@@ -658,21 +663,11 @@ class MusicGraph {
     }
 
     drag() {
+        // Drag disabled for now - circles stay stable
         return d3.drag()
-            .on('start', (event, d) => {
-                if (!event.active) this.simulation.alphaTarget(0.3).restart();
-                d.fx = d.x;
-                d.fy = d.y;
-            })
-            .on('drag', (event, d) => {
-                d.fx = event.x;
-                d.fy = event.y;
-            })
-            .on('end', (event, d) => {
-                if (!event.active) this.simulation.alphaTarget(0);
-                d.fx = null;
-                d.fy = null;
-            });
+            .on('start', () => {})
+            .on('drag', () => {})
+            .on('end', () => {});
     }
 
     highlightConnections(node, highlight) {
@@ -756,6 +751,13 @@ class MusicGraph {
 
         // Songs
         const songs = artist.songs || [];
+        const formatViews = (v) => {
+            if (!v) return '';
+            if (v >= 1000000000) return (v / 1000000000).toFixed(1) + 'B';
+            if (v >= 1000000) return (v / 1000000).toFixed(1) + 'M';
+            if (v >= 1000) return Math.floor(v / 1000) + 'K';
+            return v.toString();
+        };
         if (songs.length > 0) {
             document.getElementById('artistSongs').innerHTML = `
                 <h4>Your Liked Songs (${songs.length}${songs.length >= 20 ? '+' : ''})</h4>
@@ -765,7 +767,7 @@ class MusicGraph {
                             <span class="song-title">${s.title}</span>
                             <span class="song-meta">
                                 ${s.year ? `<span class="song-year">${s.year}</span>` : ''}
-                                ${s.views ? `<span class="song-views">${this.formatViews(s.views)}</span>` : ''}
+                                ${s.views ? `<span class="song-views">${formatViews(s.views)}</span>` : ''}
                                 ${s.plays ? `<span class="song-plays">${s.plays}x</span>` : ''}
                             </span>
                         </li>
@@ -1730,11 +1732,19 @@ MusicGraph.prototype.showArtistPanel = function(artist) {
     // Songs with play buttons, years, and play counts
     const songs = artist.songs || [];
     if (songs.length > 0) {
+        const formatViews = (v) => {
+            if (!v) return '';
+            if (v >= 1000000000) return (v / 1000000000).toFixed(1) + 'B';
+            if (v >= 1000000) return (v / 1000000).toFixed(1) + 'M';
+            if (v >= 1000) return Math.floor(v / 1000) + 'K';
+            return v.toString();
+        };
         document.getElementById('artistSongs').innerHTML = `
             <h4>Your Liked Songs (${songs.length})</h4>
             <ul class="songs-list">
                 ${songs.map(s => {
-                    const yearStr = s.year ? ` (${s.year})` : '';
+                    const yearStr = s.year ? `<span class="song-year">${s.year}</span>` : '';
+                    const viewsStr = s.views ? `<span class="song-views">${formatViews(s.views)}</span>` : '';
                     const playsStr = s.plays > 0 ? `<span class="song-plays">${s.plays}x</span>` : '';
                     return `
                     <li>
@@ -1742,9 +1752,10 @@ MusicGraph.prototype.showArtistPanel = function(artist) {
                             ▶
                         </button>
                         <div class="song-info">
-                            <span class="song-title">${s.title}${yearStr}</span>
+                            <span class="song-title">${s.title}</span>
                             <span class="song-meta">
-                                ${s.album ? `<span class="song-album">${s.album}</span>` : ''}
+                                ${yearStr}
+                                ${viewsStr}
                                 ${playsStr}
                             </span>
                         </div>
@@ -1765,7 +1776,63 @@ MusicGraph.prototype.showArtistPanel = function(artist) {
         </ul>
     `;
 
+    // Similar artists from Last.fm
+    document.getElementById('artistSimilar').innerHTML = `
+        <h4>Discover Similar</h4>
+        <button class="btn btn-discover" onclick="graph.loadSimilarArtists('${artist.name.replace(/'/g, "\\'")}')">
+            Find Similar Artists (Last.fm)
+        </button>
+        <div id="similarList"></div>
+    `;
+
     panel.classList.add('open');
+};
+
+// Fetch similar artists from Last.fm API
+MusicGraph.prototype.loadSimilarArtists = function(artistName) {
+    const container = document.getElementById('similarList');
+    container.innerHTML = '<p class="loading">Loading...</p>';
+
+    fetch(`/api/similar/${encodeURIComponent(artistName)}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) {
+                container.innerHTML = `<p class="error">${data.error}</p>`;
+                return;
+            }
+
+            const similar = data.similar || [];
+            if (similar.length === 0) {
+                container.innerHTML = '<p>No similar artists found</p>';
+                return;
+            }
+
+            // Check which artists are in our graph
+            const inGraph = new Set(this.nodes.map(n => n.name.toLowerCase()));
+
+            container.innerHTML = similar.map(a => {
+                const isInGraph = inGraph.has(a.name.toLowerCase());
+                const matchPct = Math.round(a.match * 100);
+                return `
+                    <div class="similar-artist ${isInGraph ? 'in-library' : ''}">
+                        <span class="similar-name" ${isInGraph ? `onclick="graph.focusNodeByName('${a.name.replace(/'/g, "\\'")}')"` : ''}>${a.name}</span>
+                        <span class="similar-match">${matchPct}%</span>
+                        ${isInGraph ? '<span class="in-graph-badge">In Graph</span>' : ''}
+                    </div>
+                `;
+            }).join('');
+        })
+        .catch(err => {
+            container.innerHTML = `<p class="error">Failed to load: ${err.message}</p>`;
+        });
+};
+
+// Focus on a node by artist name
+MusicGraph.prototype.focusNodeByName = function(name) {
+    const node = this.nodes.find(n => n.name.toLowerCase() === name.toLowerCase());
+    if (node) {
+        this.focusNode(node.id);
+    }
 };
 
 // Play song - opens YouTube Music search
