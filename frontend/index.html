@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Music Mapper</title>
+    <link rel="stylesheet" href="css/styles.css?v=9">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>🎵 YouTube Music Mapper</h1>
+            <p class="subtitle">Visualize your music taste as an interactive network</p>
+        </header>
+
+        <div id="controls">
+            <div class="control-group">
+                <button id="loadDemo" class="btn btn-primary">Load Demo Data</button>
+                <button id="loadData" class="btn btn-secondary">Load My Music</button>
+                <button id="refreshLayout" class="btn btn-secondary">Refresh Layout</button>
+                <button id="exportImage" class="btn btn-export">Export Image</button>
+                <button id="showRecs" class="btn btn-recommend" onclick="graph.showRecommendations()">Discover New</button>
+            </div>
+            <div class="control-group search-group">
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Search artists or songs..." autocomplete="off">
+                    <div id="searchResults" class="search-results"></div>
+                </div>
+                <select id="genreFilter" class="genre-dropdown">
+                    <option value="all">All Genres</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>
+                    <span>Node Size:</span>
+                    <input type="range" id="nodeSize" min="5" max="50" value="20">
+                </label>
+                <label>
+                    <span>Link Strength:</span>
+                    <input type="range" id="linkStrength" min="10" max="200" value="80">
+                </label>
+            </div>
+            <div class="control-group filters">
+                <label>
+                    <input type="checkbox" id="showRelated" checked>
+                    Show Related Artists
+                </label>
+                <label>
+                    <input type="checkbox" id="showLabels" checked>
+                    Show Labels
+                </label>
+                <label>
+                    <input type="checkbox" id="showGenres" checked>
+                    Show Genres
+                </label>
+            </div>
+        </div>
+
+        <div id="stats-panel">
+            <div class="stat">
+                <span class="stat-value" id="totalArtists">0</span>
+                <span class="stat-label">Artists</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value" id="totalConnections">0</span>
+                <span class="stat-label">Connections</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value" id="libraryArtists">0</span>
+                <span class="stat-label">In Library</span>
+            </div>
+            <div class="stat clickable" onclick="graph.showGenreChart()">
+                <span class="stat-value" id="totalGenres">0</span>
+                <span class="stat-label">Genres (click)</span>
+            </div>
+        </div>
+
+        <!-- Recommendations Modal -->
+        <div id="recs-modal" class="modal">
+            <div class="modal-content">
+                <button class="modal-close" onclick="closeRecsModal()">&times;</button>
+                <h2>Discover New Artists</h2>
+                <p style="text-align: center; color: #888; margin-bottom: 20px;">Based on your top artists</p>
+                <div id="recs-list"></div>
+            </div>
+        </div>
+
+        <!-- Genre Chart Modal -->
+        <div id="genre-modal" class="modal">
+            <div class="modal-content">
+                <button class="modal-close" onclick="closeGenreModal()">&times;</button>
+                <h2>Your Music Taste</h2>
+                <div id="genre-chart"></div>
+                <div id="genre-list"></div>
+            </div>
+        </div>
+
+        <div id="visualization">
+            <svg id="graph"></svg>
+        </div>
+
+        <div id="tooltip" class="tooltip"></div>
+
+        <div id="artist-panel" class="side-panel">
+            <button class="close-btn">&times;</button>
+            <div class="panel-content">
+                <img id="artistImage" src="" alt="">
+                <h2 id="artistName"></h2>
+                <div id="artistStats"></div>
+                <div id="artistSongs"></div>
+                <div id="artistConnections"></div>
+            </div>
+        </div>
+
+        <!-- DJ Tools Panel -->
+        <div id="dj-panel" class="dj-panel">
+            <div class="dj-header">
+                <h3>DJ Tools</h3>
+                <button class="dj-toggle" onclick="toggleDJPanel()">-</button>
+            </div>
+            <div class="dj-content">
+                <!-- Mix Path Finder -->
+                <div class="dj-section">
+                    <h4>Mix Path Finder</h4>
+                    <p class="dj-hint">Find transition paths between artists</p>
+                    <div class="mix-path-inputs">
+                        <input type="text" id="mixFrom" placeholder="From artist..." class="dj-input">
+                        <span class="arrow">→</span>
+                        <input type="text" id="mixTo" placeholder="To artist..." class="dj-input">
+                    </div>
+                    <button onclick="graph.findMixPath()" class="btn btn-dj">Find Path</button>
+                    <div id="mixPathResults" class="dj-results"></div>
+                </div>
+
+                <!-- Bridge Artists -->
+                <div class="dj-section">
+                    <h4>Bridge Artists</h4>
+                    <p class="dj-hint">Artists that connect different genres</p>
+                    <button onclick="graph.findBridgeArtists()" class="btn btn-dj">Find Bridges</button>
+                    <div id="bridgeResults" class="dj-results"></div>
+                </div>
+
+                <!-- Set Builder -->
+                <div class="dj-section">
+                    <h4>Set Builder</h4>
+                    <p class="dj-hint">Build a DJ set with flow</p>
+                    <select id="setGenre" class="dj-select">
+                        <option value="">Select starting genre...</option>
+                    </select>
+                    <div class="set-options">
+                        <label><input type="radio" name="setFlow" value="energy-up" checked> Energy Up</label>
+                        <label><input type="radio" name="setFlow" value="energy-down"> Wind Down</label>
+                        <label><input type="radio" name="setFlow" value="genre-journey"> Genre Journey</label>
+                    </div>
+                    <button onclick="graph.buildSet()" class="btn btn-dj">Generate Set</button>
+                    <div id="setBuilderResults" class="dj-results"></div>
+                </div>
+
+                <!-- Current Selection -->
+                <div class="dj-section">
+                    <h4>Your Set</h4>
+                    <div id="djSetList" class="dj-set-list">
+                        <p class="dj-hint">Click artists to add to your set</p>
+                    </div>
+                    <div class="set-actions">
+                        <button onclick="graph.clearSet()" class="btn btn-secondary btn-sm">Clear</button>
+                        <button onclick="graph.exportSet()" class="btn btn-dj btn-sm">Export</button>
+                    </div>
+                    <div class="set-actions" style="margin-top: 8px;">
+                        <button onclick="graph.exportForNicotine()" class="btn btn-nicotine btn-sm">Nicotine Export</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="legend">
+            <h4>Genres</h4>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #ff6b9d;"></span>
+                <span>Melodic Bass</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #e74c3c;"></span>
+                <span>Dubstep/Bass</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #9b59b6;"></span>
+                <span>Future Bass</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #3498db;"></span>
+                <span>Progressive House</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #00d2d3;"></span>
+                <span>Trance</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #e67e22;"></span>
+                <span>Trap/Bass</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-color" style="background: #fd79a8;"></span>
+                <span>Pop/EDM</span>
+            </div>
+            <h4 style="margin-top: 15px;">Brightness</h4>
+            <div class="legend-item">
+                <span class="legend-gradient"></span>
+                <span>Song count</span>
+            </div>
+            <h4 style="margin-top: 15px;">Links</h4>
+            <div class="legend-item">
+                <span class="legend-line collaboration"></span>
+                <span>Collaboration</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-line similar"></span>
+                <span>Similar Style</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/graph.js?v=9"></script>
+</body>
+</html>
