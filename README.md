@@ -20,7 +20,6 @@ Visualize your YouTube Music library as an interactive network graph. See how ar
 
 - Python 3.8+
 - A YouTube Music account with liked songs
-- Browser with YouTube Music logged in
 
 ## Installation
 
@@ -32,41 +31,61 @@ Visualize your YouTube Music library as an interactive network graph. See how ar
 
 2. **Install Python dependencies**
    ```bash
-   pip install ytmusicapi flask
+   pip install ytmusicapi flask requests
    ```
 
-3. **Authenticate with YouTube Music**
+## Getting Your Data
+
+### Option A: Google Takeout (Easier)
+
+No API setup needed - just export your data from Google:
+
+1. Go to [Google Takeout](https://takeout.google.com)
+2. Click "Deselect all", then select only **"YouTube and YouTube Music"**
+3. Click "All YouTube data included" and select:
+   - **playlists** (includes your Liked Music)
+   - **history** (your listening history)
+4. Click "Next step" → "Create export"
+5. Download and extract the ZIP file
+6. Run the import:
+   ```bash
+   cd backend
+   python import_takeout.py /path/to/Takeout
+   ```
+
+### Option B: YouTube Music API (More Data)
+
+This method gets more metadata (album art, related artists) but requires auth setup:
+
+1. **Authenticate with YouTube Music**
    ```bash
    cd backend
    ytmusicapi browser
    ```
-   This opens a browser - follow the instructions to paste your request headers from YouTube Music. This creates `browser.json`.
+   Follow the instructions to paste your request headers from YouTube Music.
 
-## Fetching Your Data
-
-1. **Fetch your liked songs and library**
+2. **Fetch your data**
    ```bash
-   cd backend
    python ytmusic_client.py
    ```
-   This creates `music_data.json` with your liked songs, artists, and listening history.
 
-2. **Assign genres to artists**
-   ```bash
-   python assign_genres.py
-   ```
-
-3. **Fetch song metadata (years and view counts)**
+3. **Fetch song metadata (years and view counts)** *(optional)*
    ```bash
    python fetch_song_metadata.py
    ```
-   Note: This makes API calls for each song, so it takes a few minutes for large libraries.
+   Note: Makes API calls for each song, takes a few minutes for large libraries.
 
-4. **Build the graph**
-   ```bash
-   python rebuild_graph.py
-   ```
-   This creates `frontend/graph_data.json`.
+## Building the Graph
+
+After importing your data (via either method):
+
+```bash
+cd backend
+python assign_genres.py
+python rebuild_graph.py
+```
+
+This creates `frontend/graph_data.json`.
 
 ## Running the App
 
@@ -116,18 +135,19 @@ Visualize your YouTube Music library as an interactive network graph. See how ar
 ```
 youtube-music-mapper/
 ├── backend/
-│   ├── server.py           # Flask API server
-│   ├── ytmusic_client.py   # Fetch data from YouTube Music
-│   ├── assign_genres.py    # Genre classification
-│   ├── fetch_song_metadata.py  # Fetch years/views
-│   ├── rebuild_graph.py    # Build graph data
-│   ├── browser.json        # YTMusic auth (gitignored)
-│   └── music_data.json     # Your music data (gitignored)
+│   ├── server.py              # Flask API server
+│   ├── import_takeout.py      # Import from Google Takeout
+│   ├── ytmusic_client.py      # Fetch data from YouTube Music API
+│   ├── assign_genres.py       # Genre classification
+│   ├── fetch_song_metadata.py # Fetch years/views
+│   ├── rebuild_graph.py       # Build graph data
+│   ├── browser.json           # YTMusic auth (gitignored)
+│   └── music_data.json        # Your music data (gitignored)
 ├── frontend/
-│   ├── index.html          # Main page
-│   ├── js/graph.js         # D3.js visualization
-│   ├── css/styles.css      # Styling
-│   └── graph_data.json     # Graph data for visualization
+│   ├── index.html             # Main page
+│   ├── js/graph.js            # D3.js visualization
+│   ├── css/styles.css         # Styling
+│   └── graph_data.json        # Graph data for visualization
 └── README.md
 ```
 

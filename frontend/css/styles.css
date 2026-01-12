@@ -754,12 +754,103 @@ header h1 {
 }
 
 .songs-list .song-views {
-    color: #3498db;
+    color: #fff;
     font-size: 0.7rem;
-    font-weight: 500;
-    background: rgba(52, 152, 219, 0.15);
-    padding: 1px 6px;
+    font-weight: 600;
+    background: #3498db;
+    padding: 2px 8px;
     border-radius: 10px;
+    margin-left: 4px;
+}
+
+/* Similar Artists (Last.fm) */
+#artistSimilar {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#artistSimilar h4 {
+    margin-bottom: 10px;
+}
+
+.btn-discover {
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(135deg, #d51007, #b91d1d);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-discover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(213, 16, 7, 0.4);
+}
+
+#similarList {
+    margin-top: 12px;
+}
+
+#similarList .loading {
+    color: #888;
+    text-align: center;
+    padding: 10px;
+}
+
+#similarList .error {
+    color: #e74c3c;
+    font-size: 0.85rem;
+}
+
+.similar-artist {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    margin-bottom: 4px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.similar-artist:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.similar-artist.in-library {
+    background: rgba(29, 185, 84, 0.1);
+    border-left: 3px solid #1db954;
+}
+
+.similar-name {
+    flex: 1;
+    font-size: 0.9rem;
+}
+
+.similar-artist.in-library .similar-name {
+    cursor: pointer;
+    color: #1db954;
+}
+
+.similar-artist.in-library .similar-name:hover {
+    text-decoration: underline;
+}
+
+.similar-match {
+    color: #888;
+    font-size: 0.75rem;
+}
+
+.in-graph-badge {
+    font-size: 0.65rem;
+    background: #1db954;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
 }
 
 #legend {
