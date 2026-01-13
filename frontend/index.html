@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Music Mapper</title>
-    <link rel="stylesheet" href="css/styles.css?v=114">
+    <link rel="stylesheet" href="css/styles.css?v=116">
     <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
@@ -233,28 +233,40 @@
     <div id="uploadModal" class="modal">
         <div class="modal-content upload-modal">
             <span class="close-modal" onclick="closeUploadModal()">&times;</span>
-            <h2>Upload Your Music Data</h2>
-            <p class="modal-subtitle">Get your YouTube Music data from Google Takeout</p>
+            <h2>Import Your Music</h2>
+            <p class="modal-subtitle">Connect a service or upload your data</p>
+
+            <!-- Spotify Connect -->
+            <div class="connect-service spotify-connect">
+                <div class="service-info">
+                    <img src="https://storage.googleapis.com/pr-newsroom-wp/1/2018/11/Spotify_Logo_RGB_Green.png" alt="Spotify" class="service-logo">
+                    <div class="service-details">
+                        <h3>Connect Spotify</h3>
+                        <p>Import your liked songs directly from Spotify</p>
+                    </div>
+                </div>
+                <button id="spotifyConnectBtn" class="btn btn-spotify" onclick="connectSpotify()">Connect</button>
+            </div>
+
+            <div class="upload-divider"><span>or upload manually</span></div>
 
             <div class="upload-instructions">
-                <h3>Option 1: Google Takeout (Recommended)</h3>
+                <h3>Google Takeout</h3>
                 <ol>
                     <li>Go to <a href="https://takeout.google.com" target="_blank">takeout.google.com</a></li>
-                    <li>Click "Deselect all", then select only <strong>"YouTube and YouTube Music"</strong></li>
-                    <li>Under YouTube, click "All YouTube data included" and select only <strong>"music-library-songs.csv"</strong> or <strong>"playlists"</strong></li>
-                    <li>Download and upload the ZIP file here</li>
+                    <li>Select only <strong>"YouTube and YouTube Music"</strong></li>
+                    <li>Download and upload the ZIP file</li>
                 </ol>
 
-                <h3>Option 2: Paste Playlist</h3>
+                <h3>Paste Playlist</h3>
                 <ol>
-                    <li>Go to your YouTube Music liked songs playlist</li>
-                    <li>Select all songs (Ctrl+A) and copy (Ctrl+C)</li>
+                    <li>Copy songs from YouTube Music or any playlist</li>
                     <li>Click "Paste Playlist" below</li>
                 </ol>
             </div>
 
             <div class="upload-actions">
-                <button class="btn btn-primary" onclick="triggerFileUpload()">Upload ZIP/CSV File</button>
+                <button class="btn btn-primary" onclick="triggerFileUpload()">Upload File</button>
                 <button class="btn btn-secondary" onclick="showPasteModal()">Paste Playlist</button>
             </div>
 
@@ -276,6 +288,6 @@
         </div>
     </div>
 
-    <script src="js/graph.js?v=115"></script>
+    <script src="js/graph.js?v=116"></script>
 </body>
 </html>

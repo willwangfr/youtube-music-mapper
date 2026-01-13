@@ -2405,3 +2405,83 @@ window.addEventListener('click', (e) => {
         e.target.classList.remove('active');
     }
 });
+
+// ==================== Spotify Integration ====================
+
+async function checkSpotifyStatus() {
+    try {
+        const response = await fetch('/api/spotify/status');
+        const data = await response.json();
+
+        const btn = document.getElementById('spotifyConnectBtn');
+        if (!btn) return;
+
+        if (!data.configured) {
+            btn.textContent = 'Not Available';
+            btn.disabled = true;
+            btn.title = 'Spotify not configured on server';
+        } else if (data.authenticated) {
+            btn.textContent = 'Load Library';
+            btn.classList.add('connected');
+            btn.onclick = loadSpotifyLibrary;
+        }
+    } catch (e) {
+        console.log('Spotify status check failed:', e);
+    }
+}
+
+async function connectSpotify() {
+    try {
+        const response = await fetch('/api/spotify/auth');
+        const data = await response.json();
+
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+
+        // Open Spotify auth in new window
+        window.location.href = data.auth_url;
+    } catch (error) {
+        alert('Error connecting to Spotify: ' + error.message);
+    }
+}
+
+async function loadSpotifyLibrary() {
+    closeUploadModal();
+    setUploadStatus('loading', 'Loading your Spotify library...');
+    openUploadModal();
+
+    try {
+        const response = await fetch('/api/spotify/library');
+        const data = await response.json();
+
+        if (data.error) {
+            setUploadStatus('error', 'Error: ' + data.error);
+            return;
+        }
+
+        setUploadStatus('success', `Found ${data.song_count} songs from ${data.artist_count} artists!`);
+
+        setTimeout(() => {
+            closeUploadModal();
+            graph.loadData(data.graph_data);
+        }, 1500);
+
+    } catch (error) {
+        setUploadStatus('error', 'Error loading Spotify library: ' + error.message);
+    }
+}
+
+// Check for Spotify callback
+if (window.location.search.includes('spotify=connected')) {
+    // Remove query param
+    window.history.replaceState({}, document.title, window.location.pathname);
+    // Load library after short delay
+    setTimeout(() => {
+        loadSpotifyLibrary();
+    }, 500);
+}
+
+// Check Spotify status on load
+document.addEventListener('DOMContentLoaded', checkSpotifyStatus);

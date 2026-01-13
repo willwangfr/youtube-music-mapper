@@ -12,6 +12,7 @@ from profile_manager import (
     delete_profile, create_group, get_group, join_group, get_group_profiles, leave_group
 )
 from taste_similarity import calculate_similarity, calculate_group_similarity, compute_taste_vector
+import spotify_client
 import os
 import json
 import requests
@@ -24,6 +25,9 @@ import tempfile
 
 # Last.fm API - get your free key at https://www.last.fm/api/account/create
 LASTFM_API_KEY = os.environ.get('LASTFM_API_KEY', '')
+
+# Store Spotify tokens in memory (in production, use a proper session store)
+spotify_tokens = {}
 
 app = Flask(__name__, static_folder="../frontend")
 CORS(app)
@@ -1027,6 +1031,139 @@ def upload_paste():
 
     except Exception as e:
         return jsonify({'error': f'Error processing playlist: {str(e)}'}), 500
+
+
+# ==================== Spotify Integration ====================
+
+@app.route("/api/spotify/status")
+def spotify_status():
+    """Check if Spotify is configured and user is authenticated."""
+    configured = spotify_client.is_configured()
+    session_id = request.cookies.get('session_id', '')
+    authenticated = session_id in spotify_tokens
+
+    return jsonify({
+        'configured': configured,
+        'authenticated': authenticated
+    })
+
+
+@app.route("/api/spotify/auth")
+def spotify_auth():
+    """Redirect to Spotify authorization."""
+    if not spotify_client.is_configured():
+        return jsonify({'error': 'Spotify not configured. Set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET.'}), 400
+
+    import uuid
+    state = str(uuid.uuid4())
+    auth_url = spotify_client.get_auth_url(state)
+
+    return jsonify({'auth_url': auth_url, 'state': state})
+
+
+@app.route("/callback/spotify")
+def spotify_callback():
+    """Handle Spotify OAuth callback."""
+    code = request.args.get('code')
+    error = request.args.get('error')
+
+    if error:
+        return f"""
+        <html><body>
+        <h1>Spotify Authorization Failed</h1>
+        <p>Error: {error}</p>
+        <script>setTimeout(() => window.close(), 3000);</script>
+        </body></html>
+        """
+
+    if not code:
+        return "No authorization code received", 400
+
+    # Exchange code for token
+    token_data, error = spotify_client.exchange_code_for_token(code)
+
+    if error:
+        return f"""
+        <html><body>
+        <h1>Token Exchange Failed</h1>
+        <p>Error: {error}</p>
+        <script>setTimeout(() => window.close(), 3000);</script>
+        </body></html>
+        """
+
+    # Generate session ID and store token
+    import uuid
+    session_id = str(uuid.uuid4())
+    spotify_tokens[session_id] = token_data
+
+    # Return HTML that stores the session and redirects
+    return f"""
+    <html><body>
+    <h1>Spotify Connected!</h1>
+    <p>Loading your music library...</p>
+    <script>
+        document.cookie = "spotify_session={session_id}; path=/; max-age=3600";
+        window.location.href = "/?spotify=connected";
+    </script>
+    </body></html>
+    """
+
+
+@app.route("/api/spotify/library")
+def spotify_library():
+    """Fetch user's Spotify library and return graph data."""
+    session_id = request.cookies.get('spotify_session', '')
+
+    if not session_id or session_id not in spotify_tokens:
+        return jsonify({'error': 'Not authenticated with Spotify'}), 401
+
+    token_data = spotify_tokens[session_id]
+    access_token = token_data.get('access_token')
+
+    if not access_token:
+        return jsonify({'error': 'Invalid token'}), 401
+
+    try:
+        # Fetch saved tracks
+        tracks = spotify_client.get_all_saved_tracks(access_token, max_tracks=1000)
+
+        if not tracks:
+            return jsonify({'error': 'No tracks found in your Spotify library'}), 404
+
+        # Build graph with genre mapping
+        graph_data = spotify_client.build_graph_from_spotify(tracks)
+
+        # Apply our genre mapping
+        genre_map = load_genre_map()
+        for node in graph_data['nodes']:
+            genre = get_artist_genre(node['name'], genre_map)
+            if genre:
+                node['genre'] = genre
+            elif not node.get('genre'):
+                node['genre'] = fetch_genre_from_lastfm(node['name']) or 'Other'
+
+        return jsonify({
+            'success': True,
+            'song_count': len(tracks),
+            'artist_count': len(graph_data['nodes']),
+            'graph_data': graph_data
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Error fetching Spotify library: {str(e)}'}), 500
+
+
+@app.route("/api/spotify/disconnect")
+def spotify_disconnect():
+    """Disconnect Spotify (clear session)."""
+    session_id = request.cookies.get('spotify_session', '')
+
+    if session_id in spotify_tokens:
+        del spotify_tokens[session_id]
+
+    response = jsonify({'success': True})
+    response.delete_cookie('spotify_session')
+    return response
 
 
 if __name__ == "__main__":
