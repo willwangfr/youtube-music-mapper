@@ -1764,3 +1764,76 @@ header h1 {
     gap: 15px;
     justify-content: center;
 }
+
+/* Spotify Connect Section */
+.connect-service {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.service-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.service-logo {
+    height: 40px;
+    width: auto;
+}
+
+.service-details h3 {
+    font-size: 1.1rem;
+    margin-bottom: 5px;
+    color: #fff;
+}
+
+.service-details p {
+    font-size: 0.85rem;
+    color: #888;
+    margin: 0;
+}
+
+.btn-spotify {
+    background: #1DB954;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    font-weight: 600;
+}
+
+.btn-spotify:hover {
+    background: #1ed760;
+    transform: translateY(-2px);
+}
+
+.btn-spotify.connected {
+    background: transparent;
+    border: 2px solid #1DB954;
+    color: #1DB954;
+}
+
+.upload-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 25px 0;
+}
+
+.upload-divider::before,
+.upload-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.upload-divider span {
+    padding: 0 15px;
+    color: #666;
+    font-size: 0.85rem;
+}
