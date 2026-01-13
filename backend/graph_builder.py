@@ -30,30 +30,33 @@ class MusicGraphBuilder:
         """Process liked songs to build artist-song relationships."""
         for song in songs:
             for artist in song.get("artists", []):
-                artist_id = artist.get("id", "")
                 artist_name = artist.get("name", "")
+                artist_id = artist.get("id") or artist_name  # Use name as ID if no ID
 
-                if artist_id and artist_name:
+                if artist_name:
                     self.artist_songs[artist_id].append(song)
 
                     if artist_id not in self.artist_info:
                         self.artist_info[artist_id] = {
                             "id": artist_id,
                             "name": artist_name,
-                            "song_count": 0
+                            "song_count": 0,
+                            "in_library": True
                         }
                     self.artist_info[artist_id]["song_count"] += 1
 
     def _process_library_artists(self, artists: List[dict]):
         """Process library artists."""
         for artist in artists:
-            artist_id = artist.get("id", "")
-            if artist_id:
+            artist_name = artist.get("artist") or artist.get("name", "")
+            artist_id = artist.get("id") or artist_name
+            if artist_name:
                 if artist_id not in self.artist_info:
                     self.artist_info[artist_id] = {
                         "id": artist_id,
-                        "name": artist.get("name", ""),
-                        "song_count": 0
+                        "name": artist_name,
+                        "song_count": artist.get("count", 0),
+                        "in_library": True
                     }
                 self.artist_info[artist_id]["thumbnail"] = artist.get("thumbnail", "")
                 self.artist_info[artist_id]["in_library"] = True
@@ -65,11 +68,12 @@ class MusicGraphBuilder:
 
         for artist_id, songs in self.artist_songs.items():
             for song in songs:
-                song_id = song.get("id", "")
+                song_id = song.get("id") or song.get("title", "")  # Use title as ID if no ID
                 if song_id:
                     for a in song.get("artists", []):
-                        if a.get("id"):
-                            song_artists[song_id].append(a.get("id"))
+                        a_id = a.get("id") or a.get("name", "")
+                        if a_id:
+                            song_artists[song_id].append(a_id)
 
         # Create edges between artists who collaborated
         for song_id, artists in song_artists.items():
