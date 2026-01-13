@@ -794,8 +794,97 @@ def parse_zip_file(file_content):
     return songs
 
 
+def load_genre_map():
+    """Load the genre mapping file."""
+    genre_map_path = os.path.join(os.path.dirname(__file__), 'genre_map.json')
+    if os.path.exists(genre_map_path):
+        with open(genre_map_path, 'r') as f:
+            return json.load(f)
+    return {}
+
+
+def get_artist_genre(artist_name, genre_map):
+    """Get genre for an artist, trying various name formats."""
+    # Direct match
+    if artist_name in genre_map:
+        return genre_map[artist_name]
+
+    # Case-insensitive match
+    lower_name = artist_name.lower()
+    for mapped_artist, genre in genre_map.items():
+        if mapped_artist.lower() == lower_name:
+            return genre
+
+    # Try without "The " prefix
+    if lower_name.startswith('the '):
+        check_name = artist_name[4:]
+        for mapped_artist, genre in genre_map.items():
+            if mapped_artist.lower() == check_name.lower():
+                return genre
+
+    return None
+
+
+def fetch_genre_from_lastfm(artist_name):
+    """Fetch genre from Last.fm API."""
+    if not LASTFM_API_KEY:
+        return None
+
+    try:
+        url = f"http://ws.audioscrobbler.com/2.0/?method=artist.getinfo&artist={urllib.parse.quote(artist_name)}&api_key={LASTFM_API_KEY}&format=json"
+        response = requests.get(url, timeout=5)
+
+        if response.status_code == 200:
+            data = response.json()
+            tags = data.get('artist', {}).get('tags', {}).get('tag', [])
+            if tags:
+                # Map common Last.fm tags to our genres
+                tag_map = {
+                    'electronic': 'Electronic',
+                    'edm': 'Electronic',
+                    'dubstep': 'Dubstep/Bass',
+                    'bass': 'Dubstep/Bass',
+                    'house': 'House',
+                    'deep house': 'House',
+                    'tech house': 'Tech House',
+                    'progressive house': 'Progressive House',
+                    'trance': 'Trance',
+                    'future bass': 'Future Bass',
+                    'trap': 'Trap/Bass',
+                    'hip-hop': 'Hip-Hop',
+                    'hip hop': 'Hip-Hop',
+                    'rap': 'Hip-Hop',
+                    'pop': 'Pop',
+                    'rock': 'Rock',
+                    'indie': 'Electronic/Indie',
+                    'k-pop': 'K-Pop',
+                    'kpop': 'K-Pop',
+                    'drum and bass': 'Drum & Bass',
+                    'dnb': 'Drum & Bass',
+                    'jazz': 'Jazz',
+                    'funk': 'Funk/Electronic',
+                    'r&b': 'Pop',
+                    'rnb': 'Pop'
+                }
+
+                for tag in tags:
+                    tag_name = tag.get('name', '').lower()
+                    if tag_name in tag_map:
+                        return tag_map[tag_name]
+
+                # Return first tag if no mapping found
+                return tags[0].get('name', 'Other').title()
+    except:
+        pass
+
+    return None
+
+
 def build_graph_from_songs(songs):
     """Build graph data from parsed songs."""
+    # Load genre map
+    genre_map = load_genre_map()
+
     # Group songs by artist
     artist_songs = {}
     for song in songs:
@@ -810,12 +899,19 @@ def build_graph_from_songs(songs):
 
     for artist, artist_song_list in artist_songs.items():
         importance = len(artist_song_list) / max_songs
+
+        # Get genre from map or Last.fm
+        genre = get_artist_genre(artist, genre_map)
+        if not genre:
+            genre = fetch_genre_from_lastfm(artist) or 'Other'
+
         nodes.append({
             'id': artist,
             'name': artist,
             'song_count': len(artist_song_list),
             'importance': importance,
             'in_library': True,
+            'genre': genre,
             'songs': [{'title': s['title']} for s in artist_song_list[:20]]  # Limit songs
         })
 
