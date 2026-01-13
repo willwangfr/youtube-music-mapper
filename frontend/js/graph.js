@@ -2277,3 +2277,125 @@ async function copyToClipboard(text) {
         return false;
     }
 }
+
+// ==================== Upload Functionality ====================
+
+function openUploadModal() {
+    document.getElementById('uploadModal').classList.add('active');
+}
+
+function closeUploadModal() {
+    document.getElementById('uploadModal').classList.remove('active');
+    document.getElementById('uploadStatus').className = 'upload-status';
+    document.getElementById('uploadStatus').textContent = '';
+}
+
+function showPasteModal() {
+    closeUploadModal();
+    document.getElementById('pasteModal').classList.add('active');
+}
+
+function closePasteModal() {
+    document.getElementById('pasteModal').classList.remove('active');
+    document.getElementById('pasteArea').value = '';
+}
+
+function triggerFileUpload() {
+    document.getElementById('fileInput').click();
+}
+
+function setUploadStatus(status, message) {
+    const statusEl = document.getElementById('uploadStatus');
+    statusEl.className = 'upload-status ' + status;
+    statusEl.textContent = message;
+}
+
+// Handle file selection
+document.getElementById('fileInput')?.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadStatus('loading', 'Processing your file...');
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            setUploadStatus('error', 'Error: ' + data.error);
+            return;
+        }
+
+        setUploadStatus('success', `Found ${data.song_count} songs from ${data.artist_count} artists!`);
+
+        // Load the graph with the uploaded data
+        setTimeout(() => {
+            closeUploadModal();
+            graph.loadData(data.graph_data);
+        }, 1500);
+
+    } catch (error) {
+        setUploadStatus('error', 'Error uploading file: ' + error.message);
+    }
+
+    // Reset file input
+    e.target.value = '';
+});
+
+// Process pasted playlist data
+async function processPastedData() {
+    const pasteArea = document.getElementById('pasteArea');
+    const text = pasteArea.value.trim();
+
+    if (!text) {
+        alert('Please paste your playlist data first');
+        return;
+    }
+
+    closePasteModal();
+    openUploadModal();
+    setUploadStatus('loading', 'Processing your playlist...');
+
+    try {
+        const response = await fetch('/api/upload/paste', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ playlist_text: text })
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            setUploadStatus('error', 'Error: ' + data.error);
+            return;
+        }
+
+        setUploadStatus('success', `Found ${data.song_count} songs from ${data.artist_count} artists!`);
+
+        // Load the graph with the processed data
+        setTimeout(() => {
+            closeUploadModal();
+            graph.loadData(data.graph_data);
+        }, 1500);
+
+    } catch (error) {
+        setUploadStatus('error', 'Error processing playlist: ' + error.message);
+    }
+}
+
+// Set up upload button click handler
+document.getElementById('uploadData')?.addEventListener('click', openUploadModal);
+
+// Close modals on outside click
+window.addEventListener('click', (e) => {
+    if (e.target.classList.contains('modal')) {
+        e.target.classList.remove('active');
+    }
+});

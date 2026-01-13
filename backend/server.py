@@ -16,6 +16,11 @@ import os
 import json
 import requests
 import urllib.parse
+import zipfile
+import csv
+import io
+import re
+import tempfile
 
 # Last.fm API - get your free key at https://www.last.fm/api/account/create
 LASTFM_API_KEY = os.environ.get('LASTFM_API_KEY', '')
@@ -645,6 +650,287 @@ def demo_graph():
         }
     }
     return jsonify(sample_data)
+
+
+# ==================== Upload Endpoints ====================
+
+def parse_youtube_music_paste(text):
+    """Parse pasted YouTube Music playlist text."""
+    songs = []
+    lines = text.strip().split('\n')
+
+    # YouTube Music paste format can vary, but typically:
+    # "Song Title\nArtist Name\n3:45\n" or "Song Title - Artist Name"
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        if not line:
+            i += 1
+            continue
+
+        # Skip time stamps like "3:45" or "12:34"
+        if re.match(r'^\d{1,2}:\d{2}$', line):
+            i += 1
+            continue
+
+        # Skip common non-song lines
+        if line.lower() in ['liked music', 'shuffle', 'radio', 'add to library', 'share', 'download']:
+            i += 1
+            continue
+
+        # Try to detect "Song - Artist" format
+        if ' - ' in line:
+            parts = line.split(' - ', 1)
+            title = parts[0].strip()
+            artist = parts[1].strip() if len(parts) > 1 else 'Unknown Artist'
+            songs.append({'title': title, 'artist': artist})
+            i += 1
+            continue
+
+        # YouTube Music often has Title on one line, Artist on next
+        title = line
+        artist = 'Unknown Artist'
+
+        # Look ahead for artist
+        if i + 1 < len(lines):
+            next_line = lines[i + 1].strip()
+            # Check if next line is likely an artist (not a timestamp, not empty)
+            if next_line and not re.match(r'^\d{1,2}:\d{2}$', next_line):
+                if next_line.lower() not in ['liked music', 'shuffle', 'radio', 'add to library', 'share', 'download']:
+                    artist = next_line
+                    i += 1  # Skip the artist line too
+
+        songs.append({'title': title, 'artist': artist})
+        i += 1
+
+    return songs
+
+
+def parse_csv_file(content):
+    """Parse Google Takeout CSV file."""
+    songs = []
+
+    # Try to decode as utf-8
+    try:
+        text = content.decode('utf-8')
+    except:
+        text = content.decode('latin-1')
+
+    reader = csv.DictReader(io.StringIO(text))
+
+    for row in reader:
+        # Google Takeout format may have different column names
+        title = row.get('Title', row.get('title', row.get('Song', '')))
+        artist = row.get('Artist', row.get('artist', row.get('Artists', '')))
+
+        if title and artist:
+            songs.append({'title': title, 'artist': artist})
+
+    return songs
+
+
+def parse_json_file(content):
+    """Parse JSON file (playlist export or our format)."""
+    songs = []
+
+    try:
+        data = json.loads(content)
+    except:
+        return []
+
+    # Handle different JSON formats
+    if isinstance(data, list):
+        # Simple list of songs
+        for item in data:
+            if isinstance(item, dict):
+                title = item.get('title', item.get('name', ''))
+                artist = item.get('artist', item.get('artists', ''))
+                if isinstance(artist, list):
+                    artist = ', '.join(artist)
+                if title:
+                    songs.append({'title': title, 'artist': artist or 'Unknown Artist'})
+    elif isinstance(data, dict):
+        # Maybe it's our exported format or YouTube Music format
+        if 'liked_songs' in data:
+            for song in data['liked_songs']:
+                songs.append({'title': song.get('title', ''), 'artist': song.get('artist', 'Unknown Artist')})
+        elif 'items' in data:
+            for item in data['items']:
+                title = item.get('title', '')
+                artist = item.get('artist', item.get('artists', 'Unknown Artist'))
+                if isinstance(artist, list):
+                    artist = ', '.join(artist)
+                if title:
+                    songs.append({'title': title, 'artist': artist})
+
+    return songs
+
+
+def parse_zip_file(file_content):
+    """Parse Google Takeout ZIP file."""
+    songs = []
+
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        tmp.write(file_content)
+        tmp_path = tmp.name
+
+    try:
+        with zipfile.ZipFile(tmp_path, 'r') as zip_ref:
+            for filename in zip_ref.namelist():
+                # Look for music-related files
+                lower_name = filename.lower()
+                if 'music-library-songs' in lower_name and lower_name.endswith('.csv'):
+                    content = zip_ref.read(filename)
+                    songs.extend(parse_csv_file(content))
+                elif 'liked' in lower_name and lower_name.endswith('.csv'):
+                    content = zip_ref.read(filename)
+                    songs.extend(parse_csv_file(content))
+                elif lower_name.endswith('.json') and 'music' in lower_name:
+                    content = zip_ref.read(filename)
+                    songs.extend(parse_json_file(content))
+    finally:
+        os.unlink(tmp_path)
+
+    return songs
+
+
+def build_graph_from_songs(songs):
+    """Build graph data from parsed songs."""
+    # Group songs by artist
+    artist_songs = {}
+    for song in songs:
+        artist = song['artist']
+        if artist not in artist_songs:
+            artist_songs[artist] = []
+        artist_songs[artist].append(song)
+
+    # Create nodes
+    nodes = []
+    max_songs = max(len(s) for s in artist_songs.values()) if artist_songs else 1
+
+    for artist, artist_song_list in artist_songs.items():
+        importance = len(artist_song_list) / max_songs
+        nodes.append({
+            'id': artist,
+            'name': artist,
+            'song_count': len(artist_song_list),
+            'importance': importance,
+            'in_library': True,
+            'songs': [{'title': s['title']} for s in artist_song_list[:20]]  # Limit songs
+        })
+
+    # Create links based on shared song titles or similar names
+    links = []
+    artist_list = list(artist_songs.keys())
+
+    for i, artist1 in enumerate(artist_list):
+        for j, artist2 in enumerate(artist_list):
+            if i >= j:
+                continue
+
+            # Check for collaboration in song titles
+            songs1 = {s['title'].lower() for s in artist_songs[artist1]}
+            songs2 = {s['title'].lower() for s in artist_songs[artist2]}
+
+            # Check if any song mentions the other artist
+            collab_weight = 0
+            for title in songs1:
+                if artist2.lower() in title or any(part.lower() in title for part in artist2.split()):
+                    collab_weight += 1
+            for title in songs2:
+                if artist1.lower() in title or any(part.lower() in title for part in artist1.split()):
+                    collab_weight += 1
+
+            if collab_weight > 0:
+                links.append({
+                    'source': artist1,
+                    'target': artist2,
+                    'weight': collab_weight,
+                    'type': 'collaboration'
+                })
+
+    return {
+        'nodes': nodes,
+        'links': links,
+        'stats': {
+            'total_artists': len(nodes),
+            'total_connections': len(links),
+            'library_artists': len(nodes),
+            'related_artists': 0
+        }
+    }
+
+
+@app.route("/api/upload", methods=["POST"])
+def upload_file():
+    """Handle file upload (ZIP, CSV, JSON)."""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    filename = file.filename.lower()
+    content = file.read()
+
+    songs = []
+
+    try:
+        if filename.endswith('.zip'):
+            songs = parse_zip_file(content)
+        elif filename.endswith('.csv'):
+            songs = parse_csv_file(content)
+        elif filename.endswith('.json'):
+            songs = parse_json_file(content)
+        else:
+            return jsonify({'error': 'Unsupported file type. Use ZIP, CSV, or JSON.'}), 400
+
+        if not songs:
+            return jsonify({'error': 'No songs found in file. Check the format.'}), 400
+
+        # Build graph
+        graph_data = build_graph_from_songs(songs)
+
+        return jsonify({
+            'success': True,
+            'song_count': len(songs),
+            'artist_count': len(graph_data['nodes']),
+            'graph_data': graph_data
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Error processing file: {str(e)}'}), 500
+
+
+@app.route("/api/upload/paste", methods=["POST"])
+def upload_paste():
+    """Handle pasted playlist text."""
+    data = request.get_json()
+
+    if not data or 'playlist_text' not in data:
+        return jsonify({'error': 'No playlist text provided'}), 400
+
+    text = data['playlist_text']
+
+    try:
+        songs = parse_youtube_music_paste(text)
+
+        if not songs:
+            return jsonify({'error': 'No songs found. Try copying the playlist differently.'}), 400
+
+        # Build graph
+        graph_data = build_graph_from_songs(songs)
+
+        return jsonify({
+            'success': True,
+            'song_count': len(songs),
+            'artist_count': len(graph_data['nodes']),
+            'graph_data': graph_data
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Error processing playlist: {str(e)}'}), 500
 
 
 if __name__ == "__main__":
