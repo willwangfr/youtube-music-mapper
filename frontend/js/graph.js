@@ -645,8 +645,11 @@ class MusicGraph {
 
     getNodeRadius(d) {
         const baseSize = this.settings.nodeSize;
-        const importanceScale = d.importance ? d.importance * 100 : 1;
-        return Math.max(baseSize * 0.5, Math.min(baseSize * 2, baseSize * importanceScale));
+        const songCount = d.song_count || 1;
+        // Direct proportion: sqrt for better visual scaling (area proportional to count)
+        const scale = Math.sqrt(songCount);
+        // Min 5px, max 50px
+        return Math.max(5, Math.min(50, baseSize * 0.3 * scale));
     }
 
     ticked() {
@@ -1979,7 +1982,7 @@ document.getElementById('genre-modal')?.addEventListener('click', (e) => {
     }
 });
 
-// Auto-load demo data on page load
+// Auto-load user data on page load (falls back to demo if no data)
 window.addEventListener('load', () => {
-    setTimeout(() => graph.loadDemoData(), 500);
+    setTimeout(() => graph.loadUserData(), 500);
 });
