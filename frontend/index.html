@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Music Mapper</title>
-    <link rel="stylesheet" href="css/styles.css?v=112">
+    <link rel="stylesheet" href="css/styles.css?v=114">
     <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
@@ -17,10 +17,12 @@
         <div id="controls">
             <div class="control-group">
                 <button id="loadDemo" class="btn btn-primary">Load Demo Data</button>
+                <button id="uploadData" class="btn btn-upload">Upload Your Data</button>
                 <button id="loadData" class="btn btn-secondary">Load My Music</button>
                 <button id="refreshLayout" class="btn btn-secondary">Refresh Layout</button>
                 <button id="exportImage" class="btn btn-export">Export Image</button>
                 <button id="showRecs" class="btn btn-recommend" onclick="graph.showRecommendations()">Discover New</button>
+                <input type="file" id="fileInput" accept=".zip,.json,.csv" style="display: none;">
             </div>
             <div class="control-group">
                 <button id="shareProfile" class="btn btn-social" onclick="createAndShareProfile()">Share My Taste</button>
@@ -227,6 +229,53 @@
         </div>
     </div>
 
-    <script src="js/graph.js?v=112"></script>
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="modal">
+        <div class="modal-content upload-modal">
+            <span class="close-modal" onclick="closeUploadModal()">&times;</span>
+            <h2>Upload Your Music Data</h2>
+            <p class="modal-subtitle">Get your YouTube Music data from Google Takeout</p>
+
+            <div class="upload-instructions">
+                <h3>Option 1: Google Takeout (Recommended)</h3>
+                <ol>
+                    <li>Go to <a href="https://takeout.google.com" target="_blank">takeout.google.com</a></li>
+                    <li>Click "Deselect all", then select only <strong>"YouTube and YouTube Music"</strong></li>
+                    <li>Under YouTube, click "All YouTube data included" and select only <strong>"music-library-songs.csv"</strong> or <strong>"playlists"</strong></li>
+                    <li>Download and upload the ZIP file here</li>
+                </ol>
+
+                <h3>Option 2: Paste Playlist</h3>
+                <ol>
+                    <li>Go to your YouTube Music liked songs playlist</li>
+                    <li>Select all songs (Ctrl+A) and copy (Ctrl+C)</li>
+                    <li>Click "Paste Playlist" below</li>
+                </ol>
+            </div>
+
+            <div class="upload-actions">
+                <button class="btn btn-primary" onclick="triggerFileUpload()">Upload ZIP/CSV File</button>
+                <button class="btn btn-secondary" onclick="showPasteModal()">Paste Playlist</button>
+            </div>
+
+            <div id="uploadStatus" class="upload-status"></div>
+        </div>
+    </div>
+
+    <!-- Paste Modal -->
+    <div id="pasteModal" class="modal">
+        <div class="modal-content paste-modal">
+            <span class="close-modal" onclick="closePasteModal()">&times;</span>
+            <h2>Paste Your Playlist</h2>
+            <p>Copy your YouTube Music playlist and paste it below:</p>
+            <textarea id="pasteArea" placeholder="Paste your playlist here...&#10;&#10;Format: Song Title - Artist Name&#10;or just paste directly from YouTube Music"></textarea>
+            <div class="paste-actions">
+                <button class="btn btn-primary" onclick="processPastedData()">Process Playlist</button>
+                <button class="btn btn-secondary" onclick="closePasteModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/graph.js?v=113"></script>
 </body>
 </html>
