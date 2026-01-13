@@ -25,7 +25,7 @@ Visualize your YouTube Music library as an interactive network graph. See how ar
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/wwang63/youtube-music-mapper.git
+   git clone https://github.com/willwangfr/youtube-music-mapper.git
    cd youtube-music-mapper
    ```
 
