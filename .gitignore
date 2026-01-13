@@ -9,6 +9,9 @@ venv/
 # Data files (large/private)
 backend/music_data.json
 
+# Google OAuth secrets - NEVER commit these
+client_secret*.json
+
 # OS
 .DS_Store
 Thumbs.db
