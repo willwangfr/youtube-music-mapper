@@ -11,6 +11,8 @@ backend/music_data.json
 
 # Google OAuth secrets - NEVER commit these
 client_secret*.json
+backend/oauth.json
+oauth.json
 
 # OS
 .DS_Store
