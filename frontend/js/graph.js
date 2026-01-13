@@ -432,6 +432,12 @@ class MusicGraph {
         return `#${f(0)}${f(8)}${f(4)}`;
     }
 
+    loadData(data) {
+        // Public method to load and render graph data
+        console.log('Loading data:', data);
+        this.renderGraph(data);
+    }
+
     renderGraph(data) {
         // Clear existing elements
         this.g.selectAll('*').remove();
