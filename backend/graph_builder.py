@@ -146,22 +146,35 @@ class MusicGraphBuilder:
             # Boost importance based on how many songs user has from this artist
             self.graph.nodes[node]["importance"] = base_importance * (1 + song_count * 0.1)
 
+    def load_genre_map(self, filepath: str = "genre_map.json"):
+        """Load genre mappings from JSON file."""
+        try:
+            with open(filepath, "r") as f:
+                return json.load(f)
+        except FileNotFoundError:
+            return {}
+
     def export_for_visualization(self, output_file: str = "graph_data.json"):
         """Export graph data in format suitable for D3.js visualization."""
         self.build_graph_nodes()
         self.calculate_node_importance()
 
+        # Load genre map
+        genre_map = self.load_genre_map()
+
         nodes = []
         for node_id in self.graph.nodes():
             node_data = self.graph.nodes[node_id]
+            artist_name = node_data.get("name", "")
             nodes.append({
                 "id": node_id,
-                "name": node_data.get("name", ""),
+                "name": artist_name,
                 "song_count": node_data.get("song_count", 0),
                 "thumbnail": node_data.get("thumbnail", ""),
                 "importance": node_data.get("importance", 0.01),
                 "in_library": node_data.get("in_library", False),
-                "is_related": node_data.get("is_related", False)
+                "is_related": node_data.get("is_related", False),
+                "genre": genre_map.get(artist_name, "Other")
             })
 
         links = []

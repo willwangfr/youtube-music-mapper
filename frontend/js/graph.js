@@ -19,10 +19,10 @@ class MusicGraph {
         this.g = null;
 
         this.settings = {
-            nodeSize: 20,
+            nodeSize: 15,
             linkStrength: 80,
             showRelated: true,
-            showLabels: true,
+            showLabels: false,  // Off by default for performance
             showGenres: true,
             selectedGenre: 'all'
         };
@@ -43,19 +43,22 @@ class MusicGraph {
             'Pop/EDM': '#fd79a8',
             'Pop': '#ff9ff3',
             'Electronic/Indie': '#a29bfe',
-            'Electronic': '#636e72',
+            'Electronic': '#74b9ff',
             'Drum & Bass': '#d63031',
+            'Midtempo': '#6c5ce7',
             'Midtempo Bass': '#6c5ce7',
             'Electro Soul': '#ffeaa7',
             'Tropical House': '#55efc4',
             'K-Pop': '#ff7675',
+            'Hip Hop': '#fdcb6e',
             'Hip-Hop': '#fdcb6e',
-            'Rock': '#b2bec3',
+            'Rock': '#fab1a0',
             'Cinematic': '#dfe6e9',
             'House': '#2ecc71',
             'Jazz': '#f1c40f',
-            'Other': '#636e72',
-            'default': '#555555'
+            'Funk/Electronic': '#ffeaa7',
+            'Other': '#81ecec',
+            'default': '#81ecec'
         };
 
         this.init();
@@ -106,16 +109,14 @@ class MusicGraph {
             .attr('offset', '100%')
             .attr('stop-color', '#48dbfb');
 
-        // Initialize force simulation
+        // Initialize force simulation (simplified for performance)
         this.simulation = d3.forceSimulation()
-            .force('link', d3.forceLink().id(d => d.id).distance(this.settings.linkStrength))
-            .force('charge', d3.forceManyBody().strength(-300))
+            .force('link', d3.forceLink().id(d => d.id).distance(50))
+            .force('charge', d3.forceManyBody().strength(-100).distanceMax(200))
             .force('center', d3.forceCenter(this.width / 2, this.height / 2))
-            .force('collision', d3.forceCollide().radius(d => this.getNodeRadius(d) + 10))
-            .force('cluster', this.clusterForce(0.15))
-            .force('separate', this.clusterSeparationForce(0.05))
-            .alphaDecay(0.05)
-            .velocityDecay(0.4);
+            .force('collision', d3.forceCollide().radius(d => this.getNodeRadius(d) + 2))
+            .alphaDecay(0.15)
+            .velocityDecay(0.7);
     }
 
     // Force to pull nodes in the same cluster together
@@ -247,7 +248,7 @@ class MusicGraph {
         document.getElementById('linkStrength').addEventListener('input', (e) => {
             this.settings.linkStrength = parseInt(e.target.value);
             this.simulation.force('link').distance(this.settings.linkStrength);
-            this.simulation.alpha(0.3).restart();
+            // Don't restart - keep nodes frozen
         });
 
         // Checkboxes
@@ -460,29 +461,27 @@ class MusicGraph {
             .enter()
             .append('g')
             .attr('class', 'node')
-            .call(this.drag())
             .on('click', (event, d) => this.showArtistPanel(d))
-            .on('mouseover', (event, d) => this.highlightConnections(d, true))
-            .on('mouseout', (event, d) => this.highlightConnections(d, false));
+            .on('mouseover', (event, d) => {
+                if (this.frozen) {
+                    this.showTooltip(d);
+                } else {
+                    this.highlightConnections(d, true);
+                }
+            })
+            .on('mouseout', (event, d) => {
+                if (this.frozen) {
+                    this.hideTooltip();
+                } else {
+                    this.highlightConnections(d, false);
+                }
+            });
 
-        // Add circles to nodes - color by genre
-        const maxSongCount = Math.max(...this.nodes.map(n => n.song_count || 0), 1);
-
+        // Add circles to nodes - color by genre (simplified for performance)
         this.nodeElements.append('circle')
             .attr('class', d => `node-circle ${d.in_library ? 'library' : 'related'}`)
             .attr('r', d => this.getNodeRadius(d))
-            .attr('fill', d => {
-                // Always use genre color
-                const baseColor = this.getGenreColor(d.genre || 'Other');
-
-                // Adjust brightness based on song count
-                const songRatio = (d.song_count || 0) / maxSongCount;
-                const hsl = this.hexToHSL(baseColor);
-                hsl.l = 30 + (songRatio * 40); // 30% to 70% lightness
-                hsl.s = Math.min(90, 50 + (songRatio * 40)); // boost saturation
-
-                return this.hslToHex(hsl.h, hsl.s, hsl.l);
-            });
+            .attr('fill', d => this.getGenreColor(d.genre || 'Other'));
 
         // Add labels
         this.labelElements = this.nodeElements.append('text')
@@ -501,10 +500,16 @@ class MusicGraph {
 
         this.simulation.force('link').links(this.links);
 
-        // Restart simulation and stop when settled
+        // Run simulation briefly then freeze all nodes
         this.simulation.alpha(1).restart();
+
+        // Force stop after 500ms regardless
+        setTimeout(() => {
+            this.freezeGraph();
+        }, 500);
+
         this.simulation.on('end', () => {
-            console.log('Simulation settled - nodes are now stable');
+            this.freezeGraph();
         });
 
         // Apply filters
@@ -668,6 +673,46 @@ class MusicGraph {
             .on('start', () => {})
             .on('drag', () => {})
             .on('end', () => {});
+    }
+
+    freezeGraph() {
+        if (this.frozen) return; // Only freeze once
+        this.frozen = true;
+
+        console.log('Freezing graph - all nodes now static');
+
+        // Stop simulation completely
+        this.simulation.stop();
+        this.simulation.on('tick', null);
+
+        // Store final positions and set fixed coordinates
+        this.nodes.forEach(d => {
+            d.finalX = d.x;
+            d.finalY = d.y;
+            d.fx = d.x;
+            d.fy = d.y;
+            d.vx = 0;
+            d.vy = 0;
+        });
+
+        // Set static positions directly on elements (not through simulation)
+        this.nodeElements.each(function(d) {
+            d3.select(this).attr('transform', `translate(${d.finalX}, ${d.finalY})`);
+        });
+
+        this.linkElements.each(function(d) {
+            d3.select(this)
+                .attr('x1', d.source.finalX || d.source.x)
+                .attr('y1', d.source.finalY || d.source.y)
+                .attr('x2', d.target.finalX || d.target.x)
+                .attr('y2', d.target.finalY || d.target.y);
+        });
+
+        // Override ticked to use frozen positions
+        this.ticked = () => {
+            if (!this.frozen) return;
+            // Do nothing - positions are frozen
+        };
     }
 
     highlightConnections(node, highlight) {
@@ -961,7 +1006,7 @@ class MusicGraph {
                 .attr('dy', d => this.getNodeRadius(d) + 15);
 
             this.simulation.force('collision').radius(d => this.getNodeRadius(d) + 5);
-            this.simulation.alpha(0.3).restart();
+            // Don't restart - keep nodes frozen
         }
     }
 
@@ -995,7 +1040,8 @@ class MusicGraph {
     }
 
     refreshLayout() {
-        this.simulation.alpha(1).restart();
+        // Disabled - keep nodes frozen
+        // this.simulation.alpha(1).restart();
     }
 
     exportAsImage() {
@@ -1051,7 +1097,7 @@ class MusicGraph {
             .attr('height', this.height);
 
         this.simulation.force('center', d3.forceCenter(this.width / 2, this.height / 2));
-        this.simulation.alpha(0.3).restart();
+        // Don't restart - keep nodes frozen
     }
 }
 

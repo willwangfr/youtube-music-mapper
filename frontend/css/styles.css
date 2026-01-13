@@ -534,17 +534,16 @@ header h1 {
 
 .node {
     cursor: pointer;
-    transition: transform 0.2s ease;
 }
 
-.node:hover {
-    transform: scale(1.2);
+.node:hover circle {
+    stroke-width: 3px;
+    stroke: #fff;
 }
 
 .node-circle {
-    stroke: #fff;
-    stroke-width: 2px;
-    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3));
+    stroke: rgba(255, 255, 255, 0.5);
+    stroke-width: 1px;
 }
 
 .node-circle.library {
@@ -560,12 +559,10 @@ header h1 {
     font-size: 11px;
     text-anchor: middle;
     pointer-events: none;
-    text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
 }
 
 .link {
-    stroke-opacity: 0.6;
-    transition: stroke-opacity 0.2s ease;
+    stroke-opacity: 0.4;
 }
 
 .link.collaboration {

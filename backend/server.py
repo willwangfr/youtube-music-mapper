@@ -40,11 +40,33 @@ def serve_css(filename):
 @app.route("/api/status")
 def status():
     """Check authentication status."""
-    authenticated = client.authenticate()
-    return jsonify({
-        "authenticated": authenticated,
-        "message": "Connected to YouTube Music" if authenticated else "Not authenticated"
-    })
+    # Check if we have imported data
+    has_data = os.path.exists("music_data.json")
+    if has_data:
+        with open("music_data.json", "r") as f:
+            data = json.load(f)
+            song_count = len(data.get("liked_songs", []))
+            artist_count = len(data.get("library_artists", []))
+        return jsonify({
+            "authenticated": True,
+            "message": f"Using imported data: {song_count} songs, {artist_count} artists",
+            "mode": "imported"
+        })
+
+    # Fall back to ytmusicapi auth
+    try:
+        authenticated = client.authenticate()
+        return jsonify({
+            "authenticated": authenticated,
+            "message": "Connected to YouTube Music" if authenticated else "Not authenticated",
+            "mode": "api"
+        })
+    except Exception as e:
+        return jsonify({
+            "authenticated": False,
+            "message": f"Not authenticated: {str(e)}",
+            "mode": "none"
+        })
 
 
 @app.route("/api/auth/setup", methods=["POST"])
@@ -96,9 +118,12 @@ def get_graph():
         builder = MusicGraphBuilder()
         builder.load_from_json("music_data.json")
 
-        # Add related artists if authenticated
-        if client.authenticate():
-            builder.add_related_artists(client, limit_per_artist=3)
+        # Add related artists if authenticated (optional)
+        try:
+            if client.authenticate():
+                builder.add_related_artists(client, limit_per_artist=3)
+        except Exception:
+            pass  # Skip related artists if auth fails
 
         graph_data = builder.export_for_visualization(graph_file)
         return jsonify(graph_data)
