@@ -723,12 +723,26 @@ def parse_csv_file(content):
     reader = csv.DictReader(io.StringIO(text))
 
     for row in reader:
-        # Google Takeout format may have different column names
-        title = row.get('Title', row.get('title', row.get('Song', '')))
-        artist = row.get('Artist', row.get('artist', row.get('Artists', '')))
+        # Google Takeout format: "Song Title", "Artist Name 1", "Artist Name 2", etc.
+        title = row.get('Song Title', row.get('Title', row.get('title', row.get('Song', ''))))
+
+        # Handle multiple artist columns
+        artist = row.get('Artist Name 1', row.get('Artist', row.get('artist', row.get('Artists', ''))))
+
+        # Get additional artists for collaboration detection
+        all_artists = [artist] if artist else []
+        for i in range(2, 6):  # Check Artist Name 2 through 5
+            extra_artist = row.get(f'Artist Name {i}', '')
+            if extra_artist and extra_artist.strip():
+                all_artists.append(extra_artist.strip())
 
         if title and artist:
-            songs.append({'title': title, 'artist': artist})
+            songs.append({
+                'title': title,
+                'artist': artist,
+                'all_artists': all_artists,
+                'album': row.get('Album Title', row.get('Album', ''))
+            })
 
     return songs
 
@@ -919,35 +933,50 @@ def build_graph_from_songs(songs):
             'songs': [{'title': s['title']} for s in artist_song_list[:20]]  # Limit songs
         })
 
-    # Create links based on shared song titles or similar names
+    # Create links based on collaborations (from all_artists) and song title mentions
     links = []
-    artist_list = list(artist_songs.keys())
+    collab_counts = {}  # Track collaboration pairs
 
+    # First pass: check explicit collaborations from all_artists field
+    for artist, song_list in artist_songs.items():
+        for song in song_list:
+            all_artists = song.get('all_artists', [])
+            if len(all_artists) > 1:
+                # This song has multiple artists - create links between them
+                for other_artist in all_artists[1:]:
+                    if other_artist in artist_songs:  # Only if we have songs from this artist
+                        pair = tuple(sorted([artist, other_artist]))
+                        collab_counts[pair] = collab_counts.get(pair, 0) + 1
+
+    # Second pass: check song titles for artist mentions
+    artist_list = list(artist_songs.keys())
     for i, artist1 in enumerate(artist_list):
         for j, artist2 in enumerate(artist_list):
             if i >= j:
                 continue
 
-            # Check for collaboration in song titles
-            songs1 = {s['title'].lower() for s in artist_songs[artist1]}
-            songs2 = {s['title'].lower() for s in artist_songs[artist2]}
+            pair = tuple(sorted([artist1, artist2]))
 
-            # Check if any song mentions the other artist
-            collab_weight = 0
-            for title in songs1:
-                if artist2.lower() in title or any(part.lower() in title for part in artist2.split()):
-                    collab_weight += 1
-            for title in songs2:
-                if artist1.lower() in title or any(part.lower() in title for part in artist1.split()):
-                    collab_weight += 1
+            # Check if any song title mentions the other artist
+            for song in artist_songs[artist1]:
+                title = song['title'].lower()
+                if artist2.lower() in title:
+                    collab_counts[pair] = collab_counts.get(pair, 0) + 1
 
-            if collab_weight > 0:
-                links.append({
-                    'source': artist1,
-                    'target': artist2,
-                    'weight': collab_weight,
-                    'type': 'collaboration'
-                })
+            for song in artist_songs[artist2]:
+                title = song['title'].lower()
+                if artist1.lower() in title:
+                    collab_counts[pair] = collab_counts.get(pair, 0) + 1
+
+    # Create links from collaboration counts
+    for (artist1, artist2), weight in collab_counts.items():
+        if weight > 0:
+            links.append({
+                'source': artist1,
+                'target': artist2,
+                'weight': weight,
+                'type': 'collaboration'
+            })
 
     return {
         'nodes': nodes,
