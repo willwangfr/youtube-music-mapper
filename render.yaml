@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: youtube-music-mapper
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && gunicorn server:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: LASTFM_API_KEY
+        sync: false

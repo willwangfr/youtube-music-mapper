@@ -158,27 +158,49 @@ class MusicGraphBuilder:
         except FileNotFoundError:
             return {}
 
+    def load_image_map(self, filepath: str = "artist_images.json"):
+        """Load artist image URLs from JSON file."""
+        try:
+            with open(filepath, "r") as f:
+                return json.load(f)
+        except FileNotFoundError:
+            return {}
+
     def export_for_visualization(self, output_file: str = "graph_data.json"):
         """Export graph data in format suitable for D3.js visualization."""
         self.build_graph_nodes()
         self.calculate_node_importance()
 
-        # Load genre map
+        # Load genre map and image map
         genre_map = self.load_genre_map()
+        image_map = self.load_image_map()
 
         nodes = []
         for node_id in self.graph.nodes():
             node_data = self.graph.nodes[node_id]
             artist_name = node_data.get("name", "")
+
+            # Get songs for this artist
+            artist_songs = []
+            for song in self.artist_songs.get(node_id, []):
+                artist_songs.append({
+                    "title": song.get("title", ""),
+                    "album": song.get("album", {}).get("name", "") if song.get("album") else ""
+                })
+
+            # Get thumbnail from image map or existing data
+            thumbnail = image_map.get(artist_name, node_data.get("thumbnail", ""))
+
             nodes.append({
                 "id": node_id,
                 "name": artist_name,
                 "song_count": node_data.get("song_count", 0),
-                "thumbnail": node_data.get("thumbnail", ""),
+                "thumbnail": thumbnail,
                 "importance": node_data.get("importance", 0.01),
                 "in_library": node_data.get("in_library", False),
                 "is_related": node_data.get("is_related", False),
-                "genre": genre_map.get(artist_name, "Other")
+                "genre": genre_map.get(artist_name, "Other"),
+                "songs": artist_songs
             })
 
         links = []

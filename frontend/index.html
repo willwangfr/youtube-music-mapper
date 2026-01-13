@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Music Mapper</title>
-    <link rel="stylesheet" href="css/styles.css?v=101">
+    <link rel="stylesheet" href="css/styles.css?v=112">
     <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
@@ -21,6 +21,11 @@
                 <button id="refreshLayout" class="btn btn-secondary">Refresh Layout</button>
                 <button id="exportImage" class="btn btn-export">Export Image</button>
                 <button id="showRecs" class="btn btn-recommend" onclick="graph.showRecommendations()">Discover New</button>
+            </div>
+            <div class="control-group">
+                <button id="shareProfile" class="btn btn-social" onclick="createAndShareProfile()">Share My Taste</button>
+                <button id="createGroup" class="btn btn-social" onclick="createComparisonGroup()">Create Group</button>
+                <a href="/leaderboard" class="btn btn-social">Leaderboard</a>
             </div>
             <div class="control-group search-group">
                 <div class="search-container">
@@ -222,6 +227,6 @@
         </div>
     </div>
 
-    <script src="js/graph.js?v=101"></script>
+    <script src="js/graph.js?v=112"></script>
 </body>
 </html>

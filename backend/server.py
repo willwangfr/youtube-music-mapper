@@ -7,6 +7,11 @@ from flask import Flask, jsonify, send_from_directory, request
 from flask_cors import CORS
 from ytmusic_client import YTMusicClient, export_user_data
 from graph_builder import MusicGraphBuilder
+from profile_manager import (
+    create_profile, get_profile, get_profile_music_data, list_public_profiles,
+    delete_profile, create_group, get_group, join_group, get_group_profiles, leave_group
+)
+from taste_similarity import calculate_similarity, calculate_group_similarity, compute_taste_vector
 import os
 import json
 import requests
@@ -223,6 +228,367 @@ def lastfm_status():
         "configured": bool(LASTFM_API_KEY),
         "message": "Last.fm API ready" if LASTFM_API_KEY else "Set LASTFM_API_KEY to enable similar artists"
     })
+
+
+# ============ Social Comparison Routes ============
+
+def load_genre_map():
+    """Load genre map for similarity calculations."""
+    genre_map_path = "genre_map.json"
+    if os.path.exists(genre_map_path):
+        with open(genre_map_path) as f:
+            return json.load(f)
+    return {}
+
+
+@app.route("/compare/<profile_id>")
+def compare_page(profile_id):
+    """Serve the comparison page."""
+    return send_from_directory(app.static_folder, "compare.html")
+
+
+@app.route("/group/<group_id>")
+@app.route("/group/<group_id>/join")
+def group_page(group_id):
+    """Serve the group comparison page."""
+    return send_from_directory(app.static_folder, "compare.html")
+
+
+@app.route("/leaderboard")
+def leaderboard_page():
+    """Serve the leaderboard/discovery page."""
+    return send_from_directory(app.static_folder, "leaderboard.html")
+
+
+@app.route("/api/profile/create", methods=["POST"])
+def api_create_profile():
+    """Create a new taste profile from music data."""
+    data = request.json
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    # Accept either direct music_data or use current user's data
+    music_data = data.get("music_data")
+    name = data.get("name", "")
+    public = data.get("public", True)
+
+    if not music_data:
+        # Try to use current user's music_data.json
+        if os.path.exists("music_data.json"):
+            with open("music_data.json") as f:
+                music_data = json.load(f)
+        else:
+            return jsonify({"error": "No music data provided or available"}), 400
+
+    result = create_profile(music_data, name=name, public=public)
+    return jsonify(result)
+
+
+@app.route("/api/profile/<profile_id>")
+def api_get_profile(profile_id):
+    """Get profile metadata (without full music data)."""
+    profile = get_profile(profile_id)
+    if not profile:
+        return jsonify({"error": "Profile not found"}), 404
+    return jsonify(profile)
+
+
+@app.route("/api/profile/<profile_id>/full")
+def api_get_profile_full(profile_id):
+    """Get full profile including music data."""
+    profile = get_profile(profile_id, include_music_data=True)
+    if not profile:
+        return jsonify({"error": "Profile not found"}), 404
+    return jsonify(profile)
+
+
+@app.route("/api/profile/<profile_id>", methods=["DELETE"])
+def api_delete_profile(profile_id):
+    """Delete a profile."""
+    if delete_profile(profile_id):
+        return jsonify({"success": True})
+    return jsonify({"error": "Profile not found"}), 404
+
+
+@app.route("/api/compare/<profile_id1>/<profile_id2>")
+def api_compare_profiles(profile_id1, profile_id2):
+    """Compare two profiles and return similarity metrics."""
+    # Get music data for both profiles
+    music_data1 = get_profile_music_data(profile_id1)
+    music_data2 = get_profile_music_data(profile_id2)
+
+    if not music_data1:
+        return jsonify({"error": f"Profile {profile_id1} not found"}), 404
+    if not music_data2:
+        return jsonify({"error": f"Profile {profile_id2} not found"}), 404
+
+    # Get profile metadata
+    profile1 = get_profile(profile_id1)
+    profile2 = get_profile(profile_id2)
+
+    genre_map = load_genre_map()
+    result = calculate_similarity(music_data1, music_data2, genre_map)
+
+    # Add profile info
+    result["profile1"] = {
+        "id": profile_id1,
+        "name": profile1.get("name", "Unknown")
+    }
+    result["profile2"] = {
+        "id": profile_id2,
+        "name": profile2.get("name", "Unknown")
+    }
+
+    return jsonify(result)
+
+
+@app.route("/api/compare/with-current/<profile_id>")
+def api_compare_with_current(profile_id):
+    """Compare a profile with current user's music data."""
+    # Get target profile's music data
+    target_music_data = get_profile_music_data(profile_id)
+    if not target_music_data:
+        return jsonify({"error": "Profile not found"}), 404
+
+    # Get current user's music data
+    if not os.path.exists("music_data.json"):
+        return jsonify({"error": "No local music data. Create a profile first."}), 400
+
+    with open("music_data.json") as f:
+        current_music_data = json.load(f)
+
+    target_profile = get_profile(profile_id)
+    genre_map = load_genre_map()
+
+    result = calculate_similarity(current_music_data, target_music_data, genre_map)
+
+    result["profile1"] = {"id": "current", "name": "You"}
+    result["profile2"] = {
+        "id": profile_id,
+        "name": target_profile.get("name", "Unknown")
+    }
+
+    return jsonify(result)
+
+
+# ============ Group Comparison Routes ============
+
+@app.route("/api/group/create", methods=["POST"])
+def api_create_group():
+    """Create a new comparison group."""
+    data = request.json or {}
+    name = data.get("name", "")
+    result = create_group(name)
+    return jsonify(result)
+
+
+@app.route("/api/group/<group_id>")
+def api_get_group(group_id):
+    """Get group info and member list."""
+    group = get_group(group_id)
+    if not group:
+        return jsonify({"error": "Group not found"}), 404
+
+    # Add profile names for each member
+    members = []
+    for profile_id in group["members"]:
+        profile = get_profile(profile_id)
+        if profile:
+            members.append({
+                "id": profile_id,
+                "name": profile.get("name", "Unknown"),
+                "stats": profile.get("stats", {})
+            })
+
+    return jsonify({
+        "id": group["id"],
+        "name": group["name"],
+        "created_at": group["created_at"],
+        "members": members,
+        "member_count": len(members)
+    })
+
+
+@app.route("/api/group/<group_id>/join", methods=["POST"])
+def api_join_group(group_id):
+    """Join a group with a profile."""
+    data = request.json
+    if not data or "profile_id" not in data:
+        return jsonify({"error": "profile_id required"}), 400
+
+    result = join_group(group_id, data["profile_id"])
+    if not result:
+        return jsonify({"error": "Group or profile not found"}), 404
+
+    return jsonify({"success": True, "members": result["members"]})
+
+
+@app.route("/api/group/<group_id>/leave", methods=["POST"])
+def api_leave_group(group_id):
+    """Leave a group."""
+    data = request.json
+    if not data or "profile_id" not in data:
+        return jsonify({"error": "profile_id required"}), 400
+
+    if leave_group(group_id, data["profile_id"]):
+        return jsonify({"success": True})
+    return jsonify({"error": "Not found"}), 404
+
+
+@app.route("/api/group/<group_id>/results")
+def api_group_results(group_id):
+    """Get group comparison results with pairwise matrix."""
+    profiles = get_group_profiles(group_id)
+    if not profiles:
+        return jsonify({"error": "Group not found or empty"}), 404
+
+    if len(profiles) < 2:
+        return jsonify({"error": "Need at least 2 members to compare"}), 400
+
+    genre_map = load_genre_map()
+
+    # Format profiles for group similarity
+    formatted = [
+        {"id": p["id"], "name": p.get("name", "Unknown"), "music_data": p["music_data"]}
+        for p in profiles
+    ]
+
+    result = calculate_group_similarity(formatted, genre_map)
+    result["group_id"] = group_id
+    result["group_name"] = get_group(group_id).get("name", "")
+
+    return jsonify(result)
+
+
+# ============ Discovery & Leaderboard Routes ============
+
+@app.route("/api/discover/similar/<profile_id>")
+def api_discover_similar(profile_id):
+    """Find profiles most similar to the given profile."""
+    target = get_profile(profile_id, include_music_data=True)
+    if not target:
+        return jsonify({"error": "Profile not found"}), 404
+
+    # Get all public profiles
+    public_profiles = list_public_profiles(limit=200)
+    genre_map = load_genre_map()
+
+    # Calculate similarity to each
+    results = []
+    for other in public_profiles:
+        if other["id"] == profile_id:
+            continue
+
+        other_music_data = get_profile_music_data(other["id"])
+        if not other_music_data:
+            continue
+
+        similarity = calculate_similarity(target["music_data"], other_music_data, genre_map)
+        results.append({
+            "id": other["id"],
+            "name": other["name"],
+            "stats": other["stats"],
+            "similarity": similarity["overall"],
+            "shared_count": similarity["shared_count"],
+            "top_shared": similarity["shared_artists"][:5]
+        })
+
+    # Sort by similarity
+    results.sort(key=lambda x: x["similarity"], reverse=True)
+
+    return jsonify({
+        "profile_id": profile_id,
+        "similar_profiles": results[:20]
+    })
+
+
+@app.route("/api/leaderboard/<leaderboard_type>")
+def api_leaderboard(leaderboard_type):
+    """Get various leaderboards."""
+    profiles = list_public_profiles(limit=100)
+
+    if leaderboard_type == "diverse":
+        # Most diverse taste (high diversity score)
+        profiles.sort(key=lambda p: p["stats"].get("diversity_score", 0), reverse=True)
+        return jsonify({
+            "type": "diverse",
+            "title": "Most Diverse Taste",
+            "profiles": profiles[:20]
+        })
+
+    elif leaderboard_type == "popular":
+        # Most songs
+        profiles.sort(key=lambda p: p["stats"].get("song_count", 0), reverse=True)
+        return jsonify({
+            "type": "popular",
+            "title": "Biggest Music Lovers",
+            "profiles": profiles[:20]
+        })
+
+    elif leaderboard_type == "unique":
+        # Calculate uniqueness (avg low similarity to others)
+        genre_map = load_genre_map()
+        uniqueness_scores = []
+
+        for profile in profiles[:50]:  # Limit for performance
+            music_data = get_profile_music_data(profile["id"])
+            if not music_data:
+                continue
+
+            similarities = []
+            for other in profiles[:50]:
+                if other["id"] == profile["id"]:
+                    continue
+                other_data = get_profile_music_data(other["id"])
+                if other_data:
+                    sim = calculate_similarity(music_data, other_data, genre_map)
+                    similarities.append(sim["overall"])
+
+            if similarities:
+                avg_similarity = sum(similarities) / len(similarities)
+                uniqueness_scores.append({
+                    **profile,
+                    "uniqueness": round(100 - avg_similarity, 1)
+                })
+
+        uniqueness_scores.sort(key=lambda x: x["uniqueness"], reverse=True)
+        return jsonify({
+            "type": "unique",
+            "title": "Most Unique Taste",
+            "profiles": uniqueness_scores[:20]
+        })
+
+    elif leaderboard_type.startswith("genre-"):
+        # Genre-specific leaderboard
+        genre = leaderboard_type.replace("genre-", "").replace("-", " ").title()
+        genre_profiles = []
+
+        for profile in profiles:
+            taste_vector = profile.get("taste_vector", {})
+            genre_weights = taste_vector.get("genre_weights", {})
+            weight = genre_weights.get(genre, 0)
+            if weight > 0.1:  # At least 10% of their taste
+                genre_profiles.append({
+                    **profile,
+                    "genre_weight": round(weight * 100, 1)
+                })
+
+        genre_profiles.sort(key=lambda x: x["genre_weight"], reverse=True)
+        return jsonify({
+            "type": f"genre-{genre}",
+            "title": f"Top {genre} Fans",
+            "profiles": genre_profiles[:20]
+        })
+
+    else:
+        return jsonify({"error": "Unknown leaderboard type"}), 400
+
+
+@app.route("/api/profiles/public")
+def api_public_profiles():
+    """List all public profiles."""
+    profiles = list_public_profiles()
+    return jsonify({"profiles": profiles})
 
 
 # Demo mode with sample data

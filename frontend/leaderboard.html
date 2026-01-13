@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Taste Leaderboard</title>
+    <link rel="stylesheet" href="/css/styles.css?v=108">
+    <style>
+        body {
+            overflow: auto;
+        }
+
+        .leaderboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .page-header {
+            text-align: center;
+            padding: 40px 20px;
+            margin-bottom: 30px;
+        }
+
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-subtitle {
+            color: #888;
+            margin-top: 10px;
+            font-size: 1.1rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            color: #888;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #e056fd, #be2edd);
+            border-color: transparent;
+            color: #fff;
+        }
+
+        .leaderboard-grid {
+            display: grid;
+            gap: 15px;
+        }
+
+        .leaderboard-card {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .leaderboard-card:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .rank {
+            font-size: 1.8rem;
+            font-weight: 700;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .rank-1 { color: #ffd700; }
+        .rank-2 { color: #c0c0c0; }
+        .rank-3 { color: #cd7f32; }
+
+        .profile-info {
+            flex: 1;
+        }
+
+        .profile-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .profile-meta {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .profile-stats {
+            display: flex;
+            gap: 20px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #48dbfb;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: #888;
+        }
+
+        .profile-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff6b6b, #feca57);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .top-artists {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .artist-tag {
+            padding: 4px 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            font-size: 0.75rem;
+            color: #aaa;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #888;
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+            color: #feca57;
+        }
+
+        .find-similar-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .find-similar-section h3 {
+            margin-bottom: 15px;
+        }
+
+        .similar-results {
+            margin-top: 30px;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: #888;
+            text-decoration: none;
+            margin-bottom: 20px;
+        }
+
+        .back-link:hover {
+            color: #fff;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+
+        .genre-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .genre-tab {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .genre-tab:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .genre-tab.active {
+            background: linear-gradient(135deg, #48dbfb, #0abde3);
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="leaderboard-container">
+        <a href="/" class="back-link">&larr; Back to Music Map</a>
+
+        <div class="page-header">
+            <h1 class="page-title">Music Taste Leaderboard</h1>
+            <p class="page-subtitle">Discover people with similar (or unique!) music taste</p>
+        </div>
+
+        <!-- Find Similar Section -->
+        <div class="find-similar-section" id="findSimilarSection">
+            <h3>Find Your Music Soulmate</h3>
+            <p style="color: #888; margin-bottom: 20px;">See who has the most compatible taste with yours</p>
+            <button class="btn btn-primary" onclick="findSimilarToMe()">Find Similar People</button>
+            <div id="similarResults" class="similar-results"></div>
+        </div>
+
+        <!-- Leaderboard Tabs -->
+        <div class="tabs">
+            <div class="tab active" data-type="popular" onclick="loadLeaderboard('popular')">Most Songs</div>
+            <div class="tab" data-type="diverse" onclick="loadLeaderboard('diverse')">Most Diverse</div>
+            <div class="tab" data-type="unique" onclick="loadLeaderboard('unique')">Most Unique</div>
+        </div>
+
+        <!-- Genre Filter -->
+        <div class="genre-tabs" id="genreTabs" style="display: none;">
+            <div class="genre-tab active" data-genre="all" onclick="loadGenreLeaderboard('all')">All</div>
+            <div class="genre-tab" data-genre="dubstep-bass" onclick="loadGenreLeaderboard('dubstep-bass')">Dubstep/Bass</div>
+            <div class="genre-tab" data-genre="melodic-bass" onclick="loadGenreLeaderboard('melodic-bass')">Melodic Bass</div>
+            <div class="genre-tab" data-genre="house" onclick="loadGenreLeaderboard('house')">House</div>
+            <div class="genre-tab" data-genre="hip-hop" onclick="loadGenreLeaderboard('hip-hop')">Hip Hop</div>
+            <div class="genre-tab" data-genre="k-pop" onclick="loadGenreLeaderboard('k-pop')">K-Pop</div>
+            <div class="genre-tab" data-genre="rock" onclick="loadGenreLeaderboard('rock')">Rock</div>
+        </div>
+
+        <!-- Leaderboard Content -->
+        <div id="leaderboardContent">
+            <div class="loading">Loading leaderboard...</div>
+        </div>
+    </div>
+
+    <script>
+        const myProfileId = localStorage.getItem('myProfileId');
+        let currentType = 'popular';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLeaderboard('popular');
+        });
+
+        async function loadLeaderboard(type) {
+            currentType = type;
+
+            // Update active tab
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.tab[data-type="${type}"]`)?.classList.add('active');
+
+            // Hide genre tabs for non-genre types
+            document.getElementById('genreTabs').style.display = 'none';
+
+            const content = document.getElementById('leaderboardContent');
+            content.innerHTML = '<div class="loading">Loading...</div>';
+
+            try {
+                const response = await fetch(`/api/leaderboard/${type}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                renderLeaderboard(data);
+
+            } catch (error) {
+                content.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No profiles yet</h3>
+                        <p>Be the first to create a profile!</p>
+                        <a href="/" class="btn btn-primary" style="margin-top: 20px;">Create Profile</a>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadGenreLeaderboard(genre) {
+            // Update active genre tab
+            document.querySelectorAll('.genre-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.genre-tab[data-genre="${genre}"]`)?.classList.add('active');
+
+            if (genre === 'all') {
+                loadLeaderboard(currentType);
+                return;
+            }
+
+            const content = document.getElementById('leaderboardContent');
+            content.innerHTML = '<div class="loading">Loading...</div>';
+
+            try {
+                const response = await fetch(`/api/leaderboard/genre-${genre}`);
+                const data = await response.json();
+                renderLeaderboard(data);
+            } catch (error) {
+                content.innerHTML = '<div class="empty-state"><p>Error loading genre leaderboard</p></div>';
+            }
+        }
+
+        function renderLeaderboard(data) {
+            const content = document.getElementById('leaderboardContent');
+
+            if (!data.profiles || data.profiles.length === 0) {
+                content.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No profiles yet</h3>
+                        <p>Be the first to join the leaderboard!</p>
+                        <a href="/" class="btn btn-primary" style="margin-top: 20px;">Create Profile</a>
+                    </div>
+                `;
+                return;
+            }
+
+            content.innerHTML = `
+                <h3 class="section-title">${data.title}</h3>
+                <div class="leaderboard-grid">
+                    ${data.profiles.map((profile, i) => renderProfileCard(profile, i + 1)).join('')}
+                </div>
+            `;
+        }
+
+        function renderProfileCard(profile, rank) {
+            const rankClass = rank <= 3 ? `rank-${rank}` : '';
+            const isMe = profile.id === myProfileId;
+
+            let statValue = '';
+            let statLabel = '';
+
+            if (profile.uniqueness !== undefined) {
+                statValue = profile.uniqueness + '%';
+                statLabel = 'Uniqueness';
+            } else if (profile.genre_weight !== undefined) {
+                statValue = profile.genre_weight + '%';
+                statLabel = 'Genre Focus';
+            } else if (profile.stats) {
+                statValue = profile.stats.song_count || 0;
+                statLabel = 'Songs';
+            }
+
+            return `
+                <div class="leaderboard-card" onclick="viewProfile('${profile.id}')">
+                    <div class="rank ${rankClass}">#${rank}</div>
+                    <div class="profile-avatar">${getInitials(profile.name)}</div>
+                    <div class="profile-info">
+                        <div class="profile-name">${profile.name} ${isMe ? '(You)' : ''}</div>
+                        <div class="profile-meta">
+                            ${profile.stats?.artist_count || 0} artists
+                            ${profile.stats?.top_genre ? ` • ${profile.stats.top_genre}` : ''}
+                        </div>
+                        ${profile.top_artists ? `
+                            <div class="top-artists">
+                                ${profile.top_artists.slice(0, 5).map(a => `<span class="artist-tag">${a}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="profile-stats">
+                        <div class="stat">
+                            <div class="stat-value">${statValue}</div>
+                            <div class="stat-label">${statLabel}</div>
+                        </div>
+                        ${profile.stats?.diversity_score ? `
+                            <div class="stat">
+                                <div class="stat-value">${Math.round(profile.stats.diversity_score * 100)}%</div>
+                                <div class="stat-label">Diversity</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        async function findSimilarToMe() {
+            if (!myProfileId) {
+                alert('Create a profile first to find similar people!');
+                window.location.href = '/';
+                return;
+            }
+
+            const resultsDiv = document.getElementById('similarResults');
+            resultsDiv.innerHTML = '<div class="loading">Finding your music soulmates...</div>';
+
+            try {
+                const response = await fetch(`/api/discover/similar/${myProfileId}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                if (data.similar_profiles.length === 0) {
+                    resultsDiv.innerHTML = `
+                        <div class="empty-state">
+                            <p>No similar profiles found yet. Share your profile to get more people to join!</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                resultsDiv.innerHTML = `
+                    <h3 class="section-title">Your Music Soulmates</h3>
+                    <div class="leaderboard-grid">
+                        ${data.similar_profiles.map((profile, i) => `
+                            <div class="leaderboard-card" onclick="compareWith('${profile.id}')">
+                                <div class="rank">${profile.similarity}%</div>
+                                <div class="profile-avatar" style="background: linear-gradient(135deg, #48dbfb, #0abde3);">
+                                    ${getInitials(profile.name)}
+                                </div>
+                                <div class="profile-info">
+                                    <div class="profile-name">${profile.name}</div>
+                                    <div class="profile-meta">${profile.shared_count} shared artists</div>
+                                    <div class="top-artists">
+                                        ${profile.top_shared.map(a => `<span class="artist-tag">${a}</span>`).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="empty-state"><p>Error: ${error.message}</p></div>`;
+            }
+        }
+
+        function viewProfile(profileId) {
+            if (myProfileId && myProfileId !== profileId) {
+                // Compare with this profile
+                window.location.href = `/compare/${profileId}`;
+            } else {
+                // Just view the profile (TODO: profile view page)
+                alert('Profile view coming soon! For now, you can compare with others.');
+            }
+        }
+
+        function compareWith(profileId) {
+            window.location.href = `/compare/${profileId}`;
+        }
+
+        function getInitials(name) {
+            return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+        }
+    </script>
+</body>
+</html>

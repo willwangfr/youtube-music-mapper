@@ -133,6 +133,18 @@ header h1 {
     box-shadow: 0 3px 15px rgba(243, 156, 18, 0.4);
 }
 
+.btn-social {
+    background: linear-gradient(135deg, #e056fd, #be2edd);
+    color: white;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-social:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(190, 46, 221, 0.4);
+}
+
 /* Search styles */
 .search-container {
     position: relative;
@@ -541,17 +553,27 @@ header h1 {
     stroke: #fff;
 }
 
+.node-image {
+    pointer-events: none;
+}
+
 .node-circle {
-    stroke: rgba(255, 255, 255, 0.5);
-    stroke-width: 1px;
+    pointer-events: all;
+    transition: stroke-width 0.2s;
+}
+
+.node:hover .node-circle {
+    stroke-width: 5px !important;
+    filter: brightness(1.2);
 }
 
 .node-circle.library {
-    /* fill set by JavaScript based on genre */
+    /* stroke set by JavaScript based on genre */
 }
 
 .node-circle.related {
-    /* fill set by JavaScript based on genre */
+    stroke-dasharray: 3 2;
+    opacity: 0.7;
 }
 
 .node-label {
@@ -587,6 +609,39 @@ header h1 {
     opacity: 0.2;
 }
 
+/* Animated highlight effects */
+.node {
+    transition: opacity 0.2s ease;
+}
+
+.node.highlighted-node .node-circle {
+    stroke-width: 4px !important;
+    filter: drop-shadow(0 0 8px var(--highlight-color, currentColor));
+    animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+.node.hovered-node .node-circle {
+    stroke-width: 5px !important;
+    filter: drop-shadow(0 0 12px var(--highlight-color, currentColor)) brightness(1.2);
+}
+
+@keyframes pulse-glow {
+    0%, 100% { filter: drop-shadow(0 0 6px var(--highlight-color, currentColor)); }
+    50% { filter: drop-shadow(0 0 12px var(--highlight-color, currentColor)); }
+}
+
+.link {
+    transition: stroke-opacity 0.2s ease, stroke-width 0.2s ease;
+}
+
+.link.highlighted {
+    filter: drop-shadow(0 0 3px var(--highlight-color, #48dbfb));
+}
+
+.link.highlighted[data-type="similar"] {
+    filter: drop-shadow(0 0 3px var(--highlight-color, #a29bfe));
+}
+
 .tooltip {
     position: absolute;
     background: rgba(0, 0, 0, 0.9);
@@ -613,6 +668,119 @@ header h1 {
     font-size: 0.85rem;
     color: #aaa;
     margin: 4px 0;
+}
+
+/* Enhanced tooltip styles */
+.tooltip.enhanced {
+    max-width: 320px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.tooltip-header {
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.tooltip-header h3 {
+    margin: 0;
+    flex: 1;
+}
+
+.tooltip-genre {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.tooltip-stats {
+    display: flex;
+    padding: 12px 16px;
+    gap: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tooltip-stat {
+    text-align: center;
+}
+
+.tooltip-stat .stat-value {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.tooltip-stat .stat-label {
+    font-size: 0.7rem;
+    color: #888;
+    text-transform: uppercase;
+}
+
+.tooltip-stat.collab .stat-value {
+    color: #48dbfb;
+}
+
+.tooltip-stat.similar .stat-value {
+    color: #a29bfe;
+}
+
+.tooltip-connections {
+    padding: 12px 16px;
+}
+
+.connections-title {
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.connection-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.connection-item:last-child {
+    border-bottom: none;
+}
+
+.connection-name {
+    font-size: 0.9rem;
+    color: #fff;
+}
+
+.connection-type {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.connection-item.collaboration .connection-type {
+    background: rgba(72, 219, 251, 0.2);
+    color: #48dbfb;
+}
+
+.connection-item.similar .connection-type {
+    background: rgba(162, 155, 254, 0.2);
+    color: #a29bfe;
+}
+
+.connection-more {
+    text-align: center;
+    font-size: 0.8rem;
+    color: #666;
+    padding-top: 8px;
 }
 
 .side-panel {
@@ -722,6 +890,13 @@ header h1 {
     display: block;
     color: #fff;
     font-size: 0.9rem;
+}
+
+.songs-list .song-artist {
+    display: block;
+    color: #888;
+    font-size: 0.75rem;
+    margin-top: 2px;
 }
 
 .songs-list .song-album {

@@ -109,14 +109,14 @@ class MusicGraph {
             .attr('offset', '100%')
             .attr('stop-color', '#48dbfb');
 
-        // Initialize force simulation (simplified for performance)
+        // Initialize force simulation with springy physics
         this.simulation = d3.forceSimulation()
-            .force('link', d3.forceLink().id(d => d.id).distance(50))
-            .force('charge', d3.forceManyBody().strength(-100).distanceMax(200))
-            .force('center', d3.forceCenter(this.width / 2, this.height / 2))
-            .force('collision', d3.forceCollide().radius(d => this.getNodeRadius(d) + 2))
-            .alphaDecay(0.15)
-            .velocityDecay(0.7);
+            .force('link', d3.forceLink().id(d => d.id).distance(80).strength(0.3))
+            .force('charge', d3.forceManyBody().strength(-150).distanceMax(300))
+            .force('center', d3.forceCenter(this.width / 2, this.height / 2).strength(0.05))
+            .force('collision', d3.forceCollide().radius(d => this.getNodeRadius(d) + 5).strength(0.8))
+            .alphaDecay(0.02)  // Slower decay = longer, floatier animation
+            .velocityDecay(0.4);  // Lower = more momentum/drift
     }
 
     // Force to pull nodes in the same cluster together
@@ -451,7 +451,7 @@ class MusicGraph {
             .enter()
             .append('line')
             .attr('class', d => `link ${d.type}`)
-            .attr('stroke-width', d => Math.sqrt(d.weight) * 2);
+            .attr('stroke-width', d => Math.max(0.5, Math.sqrt(d.weight) * 0.5));
 
         // Create node groups
         this.nodeElements = this.g.append('g')
@@ -461,27 +461,45 @@ class MusicGraph {
             .enter()
             .append('g')
             .attr('class', 'node')
+            .call(this.drag())
             .on('click', (event, d) => this.showArtistPanel(d))
             .on('mouseover', (event, d) => {
-                if (this.frozen) {
-                    this.showTooltip(d);
-                } else {
-                    this.highlightConnections(d, true);
-                }
+                this.highlightConnections(d, true);
             })
             .on('mouseout', (event, d) => {
-                if (this.frozen) {
-                    this.hideTooltip();
-                } else {
-                    this.highlightConnections(d, false);
-                }
+                this.highlightConnections(d, false);
             });
 
-        // Add circles to nodes - color by genre (simplified for performance)
+        // Add clip paths for circular images
+        this.nodeElements.append('clipPath')
+            .attr('id', d => `clip-${d.id.replace(/[^a-zA-Z0-9]/g, '_')}`)
+            .append('circle')
+            .attr('r', d => this.getNodeRadius(d));
+
+        // Add artist images (circular)
+        this.nodeElements.append('image')
+            .attr('class', 'node-image')
+            .attr('xlink:href', d => {
+                // Use thumbnail if available, otherwise generate from name
+                if (d.thumbnail) return d.thumbnail;
+                const name = encodeURIComponent(d.name || 'Artist');
+                const color = this.getGenreColor(d.genre || 'Other').replace('#', '');
+                return `https://ui-avatars.com/api/?name=${name}&background=${color}&color=fff&size=128&bold=true`;
+            })
+            .attr('x', d => -this.getNodeRadius(d))
+            .attr('y', d => -this.getNodeRadius(d))
+            .attr('width', d => this.getNodeRadius(d) * 2)
+            .attr('height', d => this.getNodeRadius(d) * 2)
+            .attr('clip-path', d => `url(#clip-${d.id.replace(/[^a-zA-Z0-9]/g, '_')})`)
+            .attr('preserveAspectRatio', 'xMidYMid slice');
+
+        // Add border circle for genre color
         this.nodeElements.append('circle')
             .attr('class', d => `node-circle ${d.in_library ? 'library' : 'related'}`)
             .attr('r', d => this.getNodeRadius(d))
-            .attr('fill', d => this.getGenreColor(d.genre || 'Other'));
+            .attr('fill', 'none')
+            .attr('stroke', d => this.getGenreColor(d.genre || 'Other'))
+            .attr('stroke-width', 3);
 
         // Add labels
         this.labelElements = this.nodeElements.append('text')
@@ -503,10 +521,10 @@ class MusicGraph {
         // Run simulation briefly then freeze all nodes
         this.simulation.alpha(1).restart();
 
-        // Force stop after 500ms regardless
+        // Let it settle for 3 seconds then freeze (will unfreeze on drag)
         setTimeout(() => {
             this.freezeGraph();
-        }, 500);
+        }, 3000);
 
         this.simulation.on('end', () => {
             this.freezeGraph();
@@ -671,82 +689,185 @@ class MusicGraph {
     }
 
     drag() {
-        // Drag disabled for now - circles stay stable
+        const self = this;
         return d3.drag()
-            .on('start', () => {})
-            .on('drag', () => {})
-            .on('end', () => {});
+            .on('start', function(event, d) {
+                d3.select(this).raise(); // Bring to front
+
+                // Unfreeze all nodes for physics
+                self.nodes.forEach(n => {
+                    n.fx = null;
+                    n.fy = null;
+                });
+
+                // Fix the dragged node
+                d.fx = d.x;
+                d.fy = d.y;
+
+                // Wake up simulation
+                self.simulation.alphaTarget(0.3).restart();
+            })
+            .on('drag', function(event, d) {
+                // Move the dragged node
+                d.fx = event.x;
+                d.fy = event.y;
+            })
+            .on('end', function(event, d) {
+                // Let simulation cool down
+                self.simulation.alphaTarget(0);
+
+                // Optionally re-freeze after settling (comment out for permanent physics)
+                // setTimeout(() => self.freezeGraph(), 2000);
+            });
+    }
+
+    // Re-enable tick updates for physics
+    setupPhysicsTick() {
+        this.simulation.on('tick', () => {
+            this.linkElements
+                .attr('x1', d => d.source.x)
+                .attr('y1', d => d.source.y)
+                .attr('x2', d => d.target.x)
+                .attr('y2', d => d.target.y);
+
+            this.nodeElements
+                .attr('transform', d => `translate(${d.x}, ${d.y})`);
+        });
     }
 
     freezeGraph() {
-        if (this.frozen) return; // Only freeze once
+        if (this.frozen) return;
         this.frozen = true;
 
-        console.log('Freezing graph - all nodes now static');
+        console.log('Initial layout complete - physics ready for interaction');
 
-        // Stop simulation completely
+        // Stop simulation but keep tick handler for dragging
         this.simulation.stop();
-        this.simulation.on('tick', null);
 
-        // Store final positions and set fixed coordinates
+        // Fix all nodes at current positions
         this.nodes.forEach(d => {
-            d.finalX = d.x;
-            d.finalY = d.y;
             d.fx = d.x;
             d.fy = d.y;
             d.vx = 0;
             d.vy = 0;
         });
 
-        // Set static positions directly on elements (not through simulation)
-        this.nodeElements.each(function(d) {
-            d3.select(this).attr('transform', `translate(${d.finalX}, ${d.finalY})`);
-        });
-
-        this.linkElements.each(function(d) {
-            d3.select(this)
-                .attr('x1', d.source.finalX || d.source.x)
-                .attr('y1', d.source.finalY || d.source.y)
-                .attr('x2', d.target.finalX || d.target.x)
-                .attr('y2', d.target.finalY || d.target.y);
-        });
-
-        // Override ticked to use frozen positions
-        this.ticked = () => {
-            if (!this.frozen) return;
-            // Do nothing - positions are frozen
-        };
+        // Do final position update
+        this.nodeElements.attr('transform', d => `translate(${d.x}, ${d.y})`);
+        this.linkElements
+            .attr('x1', d => d.source.x)
+            .attr('y1', d => d.source.y)
+            .attr('x2', d => d.target.x)
+            .attr('y2', d => d.target.y);
     }
 
     highlightConnections(node, highlight) {
         const connectedIds = new Set();
+        const connectionInfo = new Map(); // Store connection details
         connectedIds.add(node.id);
 
         this.links.forEach(link => {
             const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
             const targetId = typeof link.target === 'object' ? link.target.id : link.target;
 
-            if (sourceId === node.id) connectedIds.add(targetId);
-            if (targetId === node.id) connectedIds.add(sourceId);
+            if (sourceId === node.id) {
+                connectedIds.add(targetId);
+                connectionInfo.set(targetId, {
+                    type: link.type || 'collaboration',
+                    weight: link.weight || 1,
+                    sharedSongs: link.weight || 1
+                });
+            }
+            if (targetId === node.id) {
+                connectedIds.add(sourceId);
+                connectionInfo.set(sourceId, {
+                    type: link.type || 'collaboration',
+                    weight: link.weight || 1,
+                    sharedSongs: link.weight || 1
+                });
+            }
         });
 
+        // Get the hovered node's genre color
+        const highlightColor = this.getGenreColor(node.genre || 'Other');
+
         if (highlight) {
-            this.nodeElements.classed('faded', d => !connectedIds.has(d.id));
-            this.linkElements.classed('faded', d => {
-                const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
-                const targetId = typeof d.target === 'object' ? d.target.id : d.target;
-                return sourceId !== node.id && targetId !== node.id;
-            });
+            // Animate fade with transition
+            this.nodeElements
+                .transition()
+                .duration(200)
+                .style('opacity', d => connectedIds.has(d.id) ? 1 : 0.15);
+
+            // Highlight connected nodes with glow effect using hovered node's color
+            this.nodeElements.classed('highlighted-node', d => connectedIds.has(d.id) && d.id !== node.id);
+            this.nodeElements.classed('hovered-node', d => d.id === node.id);
+
+            // Set the highlight color on all highlighted nodes
+            this.nodeElements.select('.node-circle')
+                .style('--highlight-color', d => connectedIds.has(d.id) ? highlightColor : null);
+
+            this.linkElements
+                .transition()
+                .duration(200)
+                .style('stroke-opacity', d => {
+                    const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+                    const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+                    return (sourceId === node.id || targetId === node.id) ? 0.9 : 0.05;
+                })
+                .style('stroke-width', d => {
+                    const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+                    const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+                    if (sourceId === node.id || targetId === node.id) {
+                        return Math.max(2, Math.sqrt(d.weight || 1) * 1.5) + 'px';
+                    }
+                    return Math.sqrt(d.weight || 1) * 0.5 + 'px';
+                });
+
             this.linkElements.classed('highlighted', d => {
                 const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
                 const targetId = typeof d.target === 'object' ? d.target.id : d.target;
                 return sourceId === node.id || targetId === node.id;
             });
 
-            // Show tooltip
-            this.showTooltip(node);
+            // Set the highlight color on links
+            this.linkElements
+                .style('--highlight-color', highlightColor)
+                .style('stroke', d => {
+                    const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+                    const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+                    if (sourceId === node.id || targetId === node.id) {
+                        return highlightColor;
+                    }
+                    return null;
+                });
+
+            // Show enhanced tooltip with connection info
+            this.showEnhancedTooltip(node, connectionInfo);
         } else {
+            // Animate back
+            this.nodeElements
+                .transition()
+                .duration(200)
+                .style('opacity', 1);
+
             this.nodeElements.classed('faded', false);
+            this.nodeElements.classed('highlighted-node', false);
+            this.nodeElements.classed('hovered-node', false);
+
+            // Clear the highlight color
+            this.nodeElements.select('.node-circle').style('--highlight-color', null);
+
+            this.linkElements
+                .transition()
+                .duration(200)
+                .style('stroke-opacity', 0.3)
+                .style('stroke-width', d => Math.sqrt(d.weight || 1) * 0.5 + 'px');
+
+            // Clear link highlight styles
+            this.linkElements
+                .style('--highlight-color', null)
+                .style('stroke', null);
+
             this.linkElements.classed('faded', false);
             this.linkElements.classed('highlighted', false);
             this.hideTooltip();
@@ -768,6 +889,84 @@ class MusicGraph {
         document.addEventListener('mousemove', this.moveTooltip);
     }
 
+    showEnhancedTooltip(node, connectionInfo) {
+        const tooltip = document.getElementById('tooltip');
+        const genreColor = node.genre ? this.getGenreColor(node.genre) : '#888';
+
+        // Count connection types
+        let collabCount = 0;
+        let similarCount = 0;
+        let totalSharedSongs = 0;
+
+        connectionInfo.forEach((info, artistId) => {
+            if (info.type === 'collaboration') {
+                collabCount++;
+                totalSharedSongs += info.sharedSongs;
+            } else {
+                similarCount++;
+            }
+        });
+
+        // Build connections list (top 5)
+        const connectedArtists = [];
+        connectionInfo.forEach((info, artistId) => {
+            const artist = this.nodes.find(n => n.id === artistId);
+            if (artist) {
+                connectedArtists.push({
+                    name: artist.name,
+                    type: info.type,
+                    sharedSongs: info.sharedSongs
+                });
+            }
+        });
+
+        // Sort by shared songs and take top 5
+        connectedArtists.sort((a, b) => b.sharedSongs - a.sharedSongs);
+        const topConnections = connectedArtists.slice(0, 5);
+
+        tooltip.innerHTML = `
+            <div class="tooltip-header">
+                <h3>${node.name}</h3>
+                ${node.genre ? `<span class="tooltip-genre" style="background: ${genreColor};">${node.genre}</span>` : ''}
+            </div>
+            <div class="tooltip-stats">
+                <div class="tooltip-stat">
+                    <span class="stat-value">${node.song_count || 0}</span>
+                    <span class="stat-label">songs</span>
+                </div>
+                <div class="tooltip-stat">
+                    <span class="stat-value">${connectionInfo.size}</span>
+                    <span class="stat-label">connections</span>
+                </div>
+                ${collabCount > 0 ? `
+                <div class="tooltip-stat collab">
+                    <span class="stat-value">${collabCount}</span>
+                    <span class="stat-label">collabs</span>
+                </div>` : ''}
+                ${similarCount > 0 ? `
+                <div class="tooltip-stat similar">
+                    <span class="stat-value">${similarCount}</span>
+                    <span class="stat-label">similar</span>
+                </div>` : ''}
+            </div>
+            ${topConnections.length > 0 ? `
+            <div class="tooltip-connections">
+                <div class="connections-title">Connected Artists:</div>
+                ${topConnections.map(c => `
+                    <div class="connection-item ${c.type}">
+                        <span class="connection-name">${c.name}</span>
+                        <span class="connection-type">${c.type === 'collaboration' ? `${c.sharedSongs} song${c.sharedSongs > 1 ? 's' : ''}` : 'similar'}</span>
+                    </div>
+                `).join('')}
+                ${connectedArtists.length > 5 ? `<div class="connection-more">+${connectedArtists.length - 5} more</div>` : ''}
+            </div>` : ''}
+        `;
+        tooltip.classList.add('visible', 'enhanced');
+
+        // Position tooltip near mouse
+        document.addEventListener('mousemove', this.moveTooltip);
+    }
+
     moveTooltip = (e) => {
         const tooltip = document.getElementById('tooltip');
         tooltip.style.left = (e.pageX + 15) + 'px';
@@ -776,7 +975,7 @@ class MusicGraph {
 
     hideTooltip() {
         const tooltip = document.getElementById('tooltip');
-        tooltip.classList.remove('visible');
+        tooltip.classList.remove('visible', 'enhanced');
         document.removeEventListener('mousemove', this.moveTooltip);
     }
 
@@ -1802,6 +2001,7 @@ MusicGraph.prototype.showArtistPanel = function(artist) {
                         </button>
                         <div class="song-info">
                             <span class="song-title">${s.title}</span>
+                            <span class="song-artist">${artist.name}</span>
                             <span class="song-meta">
                                 ${yearStr}
                                 ${viewsStr}
@@ -1986,3 +2186,94 @@ document.getElementById('genre-modal')?.addEventListener('click', (e) => {
 window.addEventListener('load', () => {
     setTimeout(() => graph.loadUserData(), 500);
 });
+
+// ============ Social Features ============
+
+async function createAndShareProfile() {
+    const name = prompt('Enter your display name (optional):') || '';
+
+    try {
+        const response = await fetch('/api/profile/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, public: true })
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            alert('Error: ' + data.error);
+            return;
+        }
+
+        // Save profile ID locally
+        localStorage.setItem('myProfileId', data.id);
+
+        // Show share link
+        const shareUrl = window.location.origin + data.share_url;
+        const copied = await copyToClipboard(shareUrl);
+
+        if (copied) {
+            alert(`Profile created! Share link copied to clipboard:\n\n${shareUrl}`);
+        } else {
+            prompt('Profile created! Share this link:', shareUrl);
+        }
+
+    } catch (error) {
+        alert('Error creating profile: ' + error.message);
+    }
+}
+
+async function createComparisonGroup() {
+    const name = prompt('Enter group name (optional):') || '';
+
+    try {
+        const response = await fetch('/api/group/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            alert('Error: ' + data.error);
+            return;
+        }
+
+        // If user has a profile, auto-join the group
+        const myProfileId = localStorage.getItem('myProfileId');
+        if (myProfileId) {
+            await fetch(`/api/group/${data.id}/join`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ profile_id: myProfileId })
+            });
+        }
+
+        // Show join link
+        const joinUrl = window.location.origin + data.join_url;
+        const copied = await copyToClipboard(joinUrl);
+
+        if (copied) {
+            alert(`Group created! Invite link copied to clipboard:\n\n${joinUrl}`);
+        } else {
+            prompt('Group created! Share this invite link:', joinUrl);
+        }
+
+        // Open group page
+        window.location.href = `/group/${data.id}`;
+
+    } catch (error) {
+        alert('Error creating group: ' + error.message);
+    }
+}
+
+async function copyToClipboard(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        return true;
+    } catch {
+        return false;
+    }
+}
