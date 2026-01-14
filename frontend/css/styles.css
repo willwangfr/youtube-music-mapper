@@ -1569,9 +1569,20 @@ header h1 {
 }
 
 @media (max-width: 768px) {
+    body {
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    #app {
+        height: auto;
+        min-height: 100vh;
+    }
+
     #controls {
         flex-direction: column;
         gap: 15px;
+        padding: 10px;
     }
 
     .control-group {
@@ -1581,10 +1592,16 @@ header h1 {
 
     #stats-panel {
         gap: 20px;
+        flex-wrap: wrap;
     }
 
     .stat-value {
         font-size: 1.4rem;
+    }
+
+    #visualization {
+        min-height: 60vh;
+        height: 60vh;
     }
 
     .side-panel {
@@ -1594,6 +1611,19 @@ header h1 {
 
     #legend {
         display: none;
+    }
+
+    .dj-panel {
+        display: none;
+    }
+
+    header h1 {
+        font-size: 1.5rem;
+    }
+
+    .btn {
+        padding: 8px 14px;
+        font-size: 0.8rem;
     }
 }
 
