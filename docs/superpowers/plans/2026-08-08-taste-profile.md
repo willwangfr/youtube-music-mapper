@@ -288,7 +288,8 @@ cp ~/Documents/youtube-music-mapper-backups/artist_meta-lastfm-2026-08-08.json b
 python3 -c "import json;d=json.load(open('backend/data/artist_meta.json'));print(len(d),'artists,',sum(1 for v in d.values() if v.get('listeners')),'with listeners')"
 ```
 
-Expected: `1157 artists, 1148 with listeners`
+Expected: `1271 artists, 1261 with listeners`. (The cache holds both raw graph node names and
+their split components, so it is larger than the 1,157 distinct post-split artists in the library.)
 
 - [ ] **Step 6: Ignore the data directory**
 
