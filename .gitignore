@@ -47,3 +47,6 @@ Thumbs.db
 # Node (if any)
 node_modules/
 .env
+
+# Enrichment caches (regenerable, and large)
+backend/data/
