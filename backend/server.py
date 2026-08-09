@@ -118,9 +118,20 @@ def export_data():
     })
 
 
+VARIANT_FILES = {
+    "sparse": os.path.expanduser("~/Documents/youtube-music-mapper-backups/graph_data_2026-05-10_paste.json"),
+    "enriched": os.path.expanduser("~/Documents/youtube-music-mapper-backups/graph_data_2026-05-10_enriched.json"),
+}
+
+
 @app.route("/api/graph")
 def get_graph():
     """Get graph data for visualization."""
+    variant = request.args.get("variant")
+    if variant in VARIANT_FILES and os.path.exists(VARIANT_FILES[variant]):
+        with open(VARIANT_FILES[variant], "r") as f:
+            return jsonify(json.load(f))
+
     # Check if we have pre-built graph data
     graph_file = "../frontend/graph_data.json"
     if os.path.exists(graph_file):
