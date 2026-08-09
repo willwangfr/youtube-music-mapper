@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Mapper — Your Sound Universe</title>
+
+    <!-- Distinctive Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <!-- Grain overlay for texture -->
+    <div class="grain-overlay"></div>
+
+    <!-- Ambient glow effects -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+    <div class="ambient-glow glow-3"></div>
+
+    <!-- Main Container -->
+    <div class="app-container">
+
+        <!-- Header -->
+        <header class="main-header">
+            <div class="logo-section">
+                <div class="vinyl-icon">
+                    <div class="vinyl-grooves"></div>
+                    <div class="vinyl-label"></div>
+                </div>
+                <div class="title-group">
+                    <h1 class="site-title">Music Mapper</h1>
+                    <p class="site-tagline">Your Sound Universe, Visualized</p>
+                </div>
+            </div>
+
+            <nav class="main-nav">
+                <button class="nav-btn active" data-view="graph">
+                    <span class="nav-icon">◉</span>
+                    <span class="nav-label">Graph</span>
+                </button>
+                <button class="nav-btn" data-view="discover">
+                    <span class="nav-icon">✧</span>
+                    <span class="nav-label">Discover</span>
+                </button>
+                <button class="nav-btn" data-view="dj">
+                    <span class="nav-icon">♪</span>
+                    <span class="nav-label">DJ Tools</span>
+                </button>
+            </nav>
+        </header>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-item">
+                <span class="stat-value" id="stat-artists">0</span>
+                <span class="stat-label">Artists</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+                <span class="stat-value" id="stat-connections">0</span>
+                <span class="stat-label">Connections</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+                <span class="stat-value" id="stat-songs">0</span>
+                <span class="stat-label">Songs</span>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+                <span class="stat-value" id="stat-genres">0</span>
+                <span class="stat-label">Genres</span>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+
+            <!-- Left Sidebar - Controls -->
+            <aside class="sidebar sidebar-left">
+                <div class="sidebar-section">
+                    <h3 class="section-title">Load Data</h3>
+                    <div class="button-stack">
+                        <button class="action-btn primary" id="btn-demo">
+                            <span class="btn-icon">▶</span>
+                            Load Demo
+                        </button>
+                        <button class="action-btn" id="btn-upload">
+                            <span class="btn-icon">↑</span>
+                            Upload File
+                        </button>
+                        <button class="action-btn" id="btn-spotify">
+                            <span class="btn-icon spotify-icon"></span>
+                            Connect Spotify
+                        </button>
+                    </div>
+                    <input type="file" id="file-input" hidden accept=".json,.csv,.zip">
+                </div>
+
+                <div class="sidebar-section">
+                    <h3 class="section-title">Search</h3>
+                    <div class="search-container">
+                        <input type="text" class="search-input" id="search-input" placeholder="Find an artist...">
+                        <div class="search-results" id="search-results"></div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3 class="section-title">Filter by Genre</h3>
+                    <div class="genre-filter" id="genre-filter">
+                        <button class="genre-chip active" data-genre="all">All</button>
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3 class="section-title">Controls</h3>
+                    <div class="control-group">
+                        <label class="control-label">Node Size</label>
+                        <input type="range" class="range-slider" id="node-size" min="5" max="50" value="20">
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">Link Strength</label>
+                        <input type="range" class="range-slider" id="link-strength" min="10" max="200" value="80">
+                    </div>
+                    <div class="toggle-group">
+                        <label class="toggle-label">
+                            <input type="checkbox" id="show-labels" checked>
+                            <span class="toggle-switch"></span>
+                            Show Labels
+                        </label>
+                        <label class="toggle-label">
+                            <input type="checkbox" id="show-related">
+                            <span class="toggle-switch"></span>
+                            Related Artists
+                        </label>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center - Graph Visualization -->
+            <div class="graph-container">
+                <svg id="graph-svg"></svg>
+
+                <!-- Empty State -->
+                <div class="empty-state" id="empty-state">
+                    <div class="turntable">
+                        <div class="turntable-base">
+                            <div class="turntable-platter">
+                                <div class="vinyl-record">
+                                    <div class="vinyl-grooves"></div>
+                                    <div class="vinyl-label">
+                                        <span class="label-text">MM</span>
+                                    </div>
+                                    <div class="vinyl-shine"></div>
+                                </div>
+                            </div>
+                            <div class="tonearm">
+                                <div class="tonearm-base"></div>
+                                <div class="tonearm-arm">
+                                    <div class="tonearm-head"></div>
+                                </div>
+                            </div>
+                            <div class="turntable-controls">
+                                <div class="control-knob"></div>
+                                <div class="speed-indicator">
+                                    <span class="speed-dot active"></span>
+                                    <span class="speed-label">33</span>
+                                    <span class="speed-dot"></span>
+                                    <span class="speed-label">45</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="empty-content">
+                        <h2>Drop the Needle</h2>
+                        <p>Load your music library to see your taste universe come alive</p>
+                        <div class="empty-actions">
+                            <button class="action-btn primary large" id="btn-get-started">
+                                <span class="btn-icon">▶</span>
+                                Get Started
+                            </button>
+                            <div class="empty-hint">
+                                <span class="hint-icon">↑</span>
+                                Or drag & drop a file here
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <div class="loading-state" id="loading-state">
+                    <div class="loading-animation">
+                        <div class="loading-rings">
+                            <div class="ring ring-1"></div>
+                            <div class="ring ring-2"></div>
+                            <div class="ring ring-3"></div>
+                        </div>
+                        <div class="loading-vinyl spinning">
+                            <div class="vinyl-grooves"></div>
+                            <div class="vinyl-label">
+                                <span class="label-text">♪</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="loading-content">
+                        <p class="loading-text">Mapping your universe</p>
+                        <div class="loading-dots">
+                            <span class="dot"></span>
+                            <span class="dot"></span>
+                            <span class="dot"></span>
+                        </div>
+                    </div>
+                    <p class="loading-subtext">Discovering connections between your artists...</p>
+                </div>
+
+                <!-- Genre Legend -->
+                <div class="genre-legend" id="genre-legend">
+                    <h4 class="legend-title">Genres</h4>
+                    <div class="legend-items" id="legend-items">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar - Artist Panel -->
+            <aside class="sidebar sidebar-right" id="artist-panel">
+                <button class="panel-close" id="panel-close">×</button>
+
+                <div class="artist-header">
+                    <div class="artist-image-container">
+                        <img src="" alt="" class="artist-image" id="artist-image">
+                        <div class="artist-image-glow"></div>
+                    </div>
+                    <h2 class="artist-name" id="artist-name">Artist Name</h2>
+                    <span class="artist-genre" id="artist-genre">Genre</span>
+                </div>
+
+                <div class="artist-stats">
+                    <div class="artist-stat">
+                        <span class="artist-stat-value" id="artist-songs">0</span>
+                        <span class="artist-stat-label">Songs</span>
+                    </div>
+                    <div class="artist-stat">
+                        <span class="artist-stat-value" id="artist-connections">0</span>
+                        <span class="artist-stat-label">Connections</span>
+                    </div>
+                </div>
+
+                <div class="artist-section">
+                    <h3 class="section-title">Your Songs</h3>
+                    <ul class="song-list" id="song-list">
+                        <!-- Dynamically populated -->
+                    </ul>
+                </div>
+
+                <div class="artist-section">
+                    <h3 class="section-title">Connected Artists</h3>
+                    <div class="connected-artists" id="connected-artists">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+
+                <div class="artist-section">
+                    <h3 class="section-title">Similar Artists</h3>
+                    <div class="similar-artists" id="similar-artists">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+            </aside>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="main-footer">
+            <div class="footer-links">
+                <a href="#" class="footer-link">Share Your Taste</a>
+                <span class="footer-divider">·</span>
+                <a href="#" class="footer-link">Compare with Friends</a>
+                <span class="footer-divider">·</span>
+                <a href="#" class="footer-link">Leaderboard</a>
+            </div>
+            <p class="footer-credit">Crafted for music lovers</p>
+        </footer>
+
+    </div>
+
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip">
+        <div class="tooltip-content">
+            <span class="tooltip-name"></span>
+            <span class="tooltip-detail"></span>
+        </div>
+    </div>
+
+    <script src="js/graph.js"></script>
+</body>
+</html>
