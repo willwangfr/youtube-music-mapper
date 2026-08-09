@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Music Mapper</title>
-    <link rel="stylesheet" href="css/styles.css?v=117">
+    <link rel="stylesheet" href="css/styles.css?v=121">
     <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
@@ -69,6 +69,10 @@
                 <span class="stat-value" id="totalArtists">0</span>
                 <span class="stat-label">Artists</span>
             </div>
+            <div class="stat clickable" onclick="graph.showSongsModal()">
+                <span class="stat-value" id="totalSongs">0</span>
+                <span class="stat-label">Songs (click)</span>
+            </div>
             <div class="stat">
                 <span class="stat-value" id="totalConnections">0</span>
                 <span class="stat-label">Connections</span>
@@ -80,6 +84,16 @@
             <div class="stat clickable" onclick="graph.showGenreChart()">
                 <span class="stat-value" id="totalGenres">0</span>
                 <span class="stat-label">Genres (click)</span>
+            </div>
+        </div>
+
+        <!-- All Songs Modal -->
+        <div id="songs-modal" class="modal">
+            <div class="modal-content songs-modal-content">
+                <button class="modal-close" onclick="closeSongsModal()">&times;</button>
+                <h2>All Liked Songs (<span id="songsModalCount">0</span>)</h2>
+                <input type="text" id="songsSearchInput" placeholder="Search title, artist, or album..." class="songs-search-input">
+                <div id="songsListContainer"></div>
             </div>
         </div>
 
@@ -105,6 +119,10 @@
 
         <div id="visualization">
             <svg id="graph"></svg>
+            <div id="loading-overlay" class="loading-overlay hidden">
+                <div class="loader"></div>
+                <div class="loader-text">Loading your music universe...</div>
+            </div>
         </div>
 
         <div id="tooltip" class="tooltip"></div>
@@ -288,6 +306,6 @@
         </div>
     </div>
 
-    <script src="js/graph.js?v=116"></script>
+    <script src="js/graph.js?v=118"></script>
 </body>
 </html>

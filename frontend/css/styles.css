@@ -23,15 +23,24 @@ header {
     padding: 20px;
     background: rgba(0, 0, 0, 0.3);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    position: relative;
+    z-index: 10;
 }
 
 header h1 {
     font-size: 2rem;
     font-weight: 600;
-    background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
+    background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3, #ff6b6b);
+    background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    animation: shimmer 4s linear infinite;
+}
+
+@keyframes shimmer {
+    to { background-position: 200% center; }
 }
 
 .subtitle {
@@ -66,6 +75,22 @@ header h1 {
 .control-group input[type="range"] {
     width: 100px;
     accent-color: #ff6b6b;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.control-group input[type="range"]:hover {
+    transform: scaleX(1.05);
+}
+
+.control-group input[type="checkbox"] {
+    accent-color: #ff6b6b;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.control-group input[type="checkbox"]:hover {
+    transform: scale(1.2);
 }
 
 .control-group.filters label {
@@ -79,7 +104,31 @@ header h1 {
     cursor: pointer;
     font-size: 0.9rem;
     font-weight: 500;
-    transition: all 0.3s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.4s ease, height 0.4s ease;
+}
+
+.btn:active::after {
+    width: 200px;
+    height: 200px;
+}
+
+.btn:active {
+    transform: scale(0.97);
 }
 
 .btn-primary {
@@ -185,11 +234,18 @@ header h1 {
     max-height: 300px;
     overflow-y: auto;
     z-index: 1000;
-    display: none;
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
 }
 
 .search-results.visible {
-    display: block;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
 }
 
 .search-result-item {
@@ -301,6 +357,11 @@ header h1 {
     font-size: 1.8rem;
     font-weight: 700;
     color: #48dbfb;
+    transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.stat:hover .stat-value {
+    transform: scale(1.1);
 }
 
 .stat-label {
@@ -331,14 +392,18 @@ header h1 {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0);
     z-index: 200;
     justify-content: center;
     align-items: center;
+    backdrop-filter: blur(0px);
+    transition: background 0.3s ease, backdrop-filter 0.3s ease;
 }
 
 .modal.open {
     display: flex;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(8px);
 }
 
 .modal-content {
@@ -351,6 +416,14 @@ header h1 {
     max-height: 80vh;
     overflow-y: auto;
     position: relative;
+    transform: scale(0.9) translateY(20px);
+    opacity: 0;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+}
+
+.modal.open .modal-content {
+    transform: scale(1) translateY(0);
+    opacity: 1;
 }
 
 .modal-content h2 {
@@ -544,6 +617,83 @@ header h1 {
     background: radial-gradient(circle at center, #1a1a2e 0%, #0f0f23 100%);
 }
 
+/* Loading overlay */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 15, 35, 0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+    backdrop-filter: blur(10px);
+}
+
+.loading-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.loader {
+    width: 60px;
+    height: 60px;
+    border: 3px solid rgba(255, 107, 107, 0.2);
+    border-top: 3px solid #ff6b6b;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+.loader-text {
+    color: #888;
+    font-size: 0.9rem;
+    animation: pulse-text 1.5s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-text {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+/* Node entry animations - only on initial render */
+.node.entering {
+    animation: nodeEnter 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+
+@keyframes nodeEnter {
+    from {
+        opacity: 0;
+        transform: scale(0) translate(0, 0);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translate(0, 0);
+    }
+}
+
+.link {
+    animation: linkEnter 0.8s ease backwards;
+}
+
+@keyframes linkEnter {
+    from {
+        stroke-opacity: 0;
+    }
+    to {
+        stroke-opacity: 0.4;
+    }
+}
+
 .node {
     cursor: pointer;
 }
@@ -644,19 +794,23 @@ header h1 {
 
 .tooltip {
     position: absolute;
-    background: rgba(0, 0, 0, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
+    background: rgba(15, 15, 35, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
     padding: 12px 16px;
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.2s ease;
+    transform: translateY(5px) scale(0.98);
+    transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 1000;
     max-width: 250px;
+    backdrop-filter: blur(15px);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
 
 .tooltip.visible {
     opacity: 1;
+    transform: translateY(0) scale(1);
 }
 
 .tooltip h3 {
@@ -791,13 +945,15 @@ header h1 {
     height: 100vh;
     background: rgba(15, 15, 35, 0.95);
     border-left: 1px solid rgba(255, 255, 255, 0.1);
-    transition: right 0.3s ease;
+    transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s ease;
     z-index: 100;
     overflow-y: auto;
+    backdrop-filter: blur(20px);
 }
 
 .side-panel.open {
     right: 0;
+    box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
 }
 
 .close-btn {
@@ -851,18 +1007,72 @@ header h1 {
     color: #48dbfb;
 }
 
-#artistConnections ul {
-    list-style: none;
+.connections-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
-#artistConnections li {
-    padding: 8px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+.connection-item {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    padding: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.connection-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     cursor: pointer;
+    padding: 4px 0;
 }
 
-#artistConnections li:hover {
+.connection-header:hover .connection-name {
     color: #ff6b6b;
+}
+
+.connection-name {
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.connection-type {
+    font-size: 0.75rem;
+    color: #888;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.shared-songs {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.shared-label {
+    font-size: 0.75rem;
+    color: #48dbfb;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.shared-song {
+    display: inline-block;
+    font-size: 0.8rem;
+    background: rgba(72, 219, 251, 0.15);
+    color: #48dbfb;
+    padding: 4px 10px;
+    border-radius: 12px;
+    margin: 2px 4px 2px 0;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.shared-song:hover {
+    background: rgba(72, 219, 251, 0.3);
+    transform: scale(1.05);
 }
 
 /* Songs list */
@@ -1029,10 +1239,18 @@ header h1 {
     position: fixed;
     bottom: 20px;
     left: 20px;
-    background: rgba(0, 0, 0, 0.7);
-    border-radius: 10px;
+    background: rgba(15, 15, 35, 0.85);
+    border-radius: 12px;
     padding: 15px;
     font-size: 0.85rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+#legend:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
 }
 
 #legend h4 {
@@ -1134,10 +1352,15 @@ header h1 {
     padding: 15px;
     max-height: calc(80vh - 50px);
     overflow-y: auto;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease, opacity 0.3s ease;
+    opacity: 1;
 }
 
 .dj-content.collapsed {
-    display: none;
+    max-height: 0;
+    padding: 0 15px;
+    opacity: 0;
+    overflow: hidden;
 }
 
 .dj-section {
@@ -1866,4 +2089,88 @@ header h1 {
     padding: 0 15px;
     color: #666;
     font-size: 0.85rem;
+}
+
+.songs-modal-content {
+    max-width: 880px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.songs-search-input {
+    width: 100%;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    color: #fff;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.songs-search-input:focus {
+    border-color: rgba(255, 107, 107, 0.6);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+#songsListContainer {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.songs-modal-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.songs-modal-row {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    gap: 12px;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    cursor: pointer;
+    transition: background 0.15s;
+    align-items: center;
+}
+
+.songs-modal-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.songs-modal-row .song-title {
+    color: #fff;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.songs-modal-row .song-artist {
+    color: #feca57;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.9rem;
+}
+
+.songs-modal-row .song-album {
+    color: #888;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.85rem;
+}
+
+@media (max-width: 600px) {
+    .songs-modal-row {
+        grid-template-columns: 1fr;
+        gap: 2px;
+    }
+    .songs-modal-row .song-album { display: none; }
 }

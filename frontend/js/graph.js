@@ -309,24 +309,29 @@ class MusicGraph {
     }
 
     async loadDemoData() {
+        this.showLoading();
         try {
             const response = await fetch('/api/demo/graph');
             const data = await response.json();
             this.renderGraph(data);
+            setTimeout(() => this.hideLoading(), 500);
         } catch (error) {
             console.error('Error loading demo data:', error);
             // Fallback to local demo data
             this.renderGraph(this.getLocalDemoData());
+            setTimeout(() => this.hideLoading(), 500);
         }
     }
 
     async loadUserData() {
+        this.showLoading();
         try {
             // Check authentication status
             const statusRes = await fetch('/api/status');
             const status = await statusRes.json();
 
             if (!status.authenticated) {
+                this.hideLoading();
                 alert('Not authenticated. Please set up YouTube Music authentication first.');
                 return;
             }
@@ -338,8 +343,10 @@ class MusicGraph {
             const graphRes = await fetch('/api/graph');
             const data = await graphRes.json();
             this.renderGraph(data);
+            setTimeout(() => this.hideLoading(), 500);
         } catch (error) {
             console.error('Error loading user data:', error);
+            this.hideLoading();
             alert('Failed to load user data. Make sure the server is running.');
         }
     }
@@ -438,6 +445,20 @@ class MusicGraph {
         this.renderGraph(data);
     }
 
+    showLoading() {
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) {
+            overlay.classList.remove('hidden');
+        }
+    }
+
+    hideLoading() {
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) {
+            overlay.classList.add('hidden');
+        }
+    }
+
     renderGraph(data) {
         // Clear existing elements
         this.g.selectAll('*').remove();
@@ -446,10 +467,10 @@ class MusicGraph {
         this.links = data.links;
         this.clusters = data.clusters || [];
 
-        // Update stats
-        this.updateStats(data.stats);
+        // Update stats with animation
+        this.animateStats(data.stats);
 
-        // Create link elements
+        // Create link elements with staggered animation
         this.linkElements = this.g.append('g')
             .attr('class', 'links')
             .selectAll('line')
@@ -457,16 +478,18 @@ class MusicGraph {
             .enter()
             .append('line')
             .attr('class', d => `link ${d.type}`)
-            .attr('stroke-width', d => Math.max(0.5, Math.sqrt(d.weight) * 0.5));
+            .attr('stroke-width', d => Math.max(0.5, Math.sqrt(d.weight) * 0.5))
+            .style('animation-delay', (d, i) => `${Math.min(i * 2, 500)}ms`);
 
-        // Create node groups
+        // Create node groups with staggered animation
         this.nodeElements = this.g.append('g')
             .attr('class', 'nodes')
             .selectAll('g')
             .data(this.nodes)
             .enter()
             .append('g')
-            .attr('class', 'node')
+            .attr('class', 'node entering')
+            .style('animation-delay', (d, i) => `${Math.min(i * 5, 800)}ms`)
             .call(this.drag())
             .on('click', (event, d) => this.showArtistPanel(d))
             .on('mouseover', (event, d) => {
@@ -530,10 +553,13 @@ class MusicGraph {
         // Let it settle for 3 seconds then freeze (will unfreeze on drag)
         setTimeout(() => {
             this.freezeGraph();
+            // Remove entry animation class to prevent re-animation on interactions
+            this.nodeElements.classed('entering', false);
         }, 3000);
 
         this.simulation.on('end', () => {
             this.freezeGraph();
+            this.nodeElements.classed('entering', false);
         });
 
         // Apply filters
@@ -1035,9 +1061,30 @@ class MusicGraph {
         const connections = this.getConnections(artist);
         document.getElementById('artistConnections').innerHTML = `
             <h4>Connected Artists (${connections.length})</h4>
-            <ul>
-                ${connections.map(c => `<li onclick="graph.focusNode('${c.id}')">${c.name} (${c.type})</li>`).join('')}
-            </ul>
+            <div class="connections-list">
+                ${connections.map(c => {
+                    const sharedSongsHtml = c.shared_songs && c.shared_songs.length > 0
+                        ? `<div class="shared-songs">
+                            <span class="shared-label">Shared:</span>
+                            ${c.shared_songs.map(s => {
+                                const title = typeof s === 'string' ? s : s.title;
+                                const artists = typeof s === 'object' && s.artists ? s.artists.join(', ') : '';
+                                const displayText = artists ? `${title} — ${artists}` : title;
+                                return `<span class="shared-song" onclick="graph.playSong('${encodeURIComponent(artist.name)}', '${encodeURIComponent(title)}')">${displayText}</span>`;
+                            }).join('')}
+                           </div>`
+                        : '';
+                    return `
+                        <div class="connection-item">
+                            <div class="connection-header" onclick="graph.focusNode('${c.id}')">
+                                <span class="connection-name">${c.name}</span>
+                                <span class="connection-type">${c.type}</span>
+                            </div>
+                            ${sharedSongsHtml}
+                        </div>
+                    `;
+                }).join('')}
+            </div>
         `;
 
         panel.classList.add('open');
@@ -1051,11 +1098,11 @@ class MusicGraph {
 
             if (sourceId === node.id) {
                 const target = this.nodes.find(n => n.id === targetId);
-                if (target) connections.push({ ...target, type: link.type });
+                if (target) connections.push({ ...target, type: link.type, shared_songs: link.shared_songs || [] });
             }
             if (targetId === node.id) {
                 const source = this.nodes.find(n => n.id === sourceId);
-                if (source) connections.push({ ...source, type: link.type });
+                if (source) connections.push({ ...source, type: link.type, shared_songs: link.shared_songs || [] });
             }
         });
         return connections;
@@ -1203,6 +1250,41 @@ class MusicGraph {
         document.getElementById('totalArtists').textContent = stats.total_artists || 0;
         document.getElementById('totalConnections').textContent = stats.total_connections || 0;
         document.getElementById('libraryArtists').textContent = stats.library_artists || 0;
+        const songsEl = document.getElementById('totalSongs');
+        if (songsEl) songsEl.textContent = this.getTotalSongCount();
+    }
+
+    getTotalSongCount() {
+        return this.nodes.reduce((sum, n) => sum + (n.song_count || 0), 0);
+    }
+
+    animateStats(stats) {
+        // Animated counter effect
+        const animateValue = (element, start, end, duration) => {
+            const startTimestamp = performance.now();
+            const step = (timestamp) => {
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3); // Ease out cubic
+                element.textContent = Math.floor(eased * (end - start) + start);
+                if (progress < 1) {
+                    requestAnimationFrame(step);
+                }
+            };
+            requestAnimationFrame(step);
+        };
+
+        animateValue(document.getElementById('totalArtists'), 0, stats.total_artists || 0, 1000);
+        animateValue(document.getElementById('totalConnections'), 0, stats.total_connections || 0, 1200);
+        animateValue(document.getElementById('libraryArtists'), 0, stats.library_artists || 0, 800);
+        const songsEl = document.getElementById('totalSongs');
+        if (songsEl) animateValue(songsEl, 0, this.getTotalSongCount(), 1100);
+
+        // Count unique genres
+        const genres = new Set(this.nodes.map(n => n.genre).filter(g => g && g !== 'Other'));
+        const genreEl = document.getElementById('totalGenres');
+        if (genreEl) {
+            animateValue(genreEl, 0, genres.size, 900);
+        }
     }
 
     updateNodeSizes() {
@@ -1311,6 +1393,29 @@ class MusicGraph {
 
 // Initialize graph
 const graph = new MusicGraph('#graph');
+
+// Auto-load a specific graph variant when URL has ?variant=sparse or ?variant=enriched.
+// Used for side-by-side comparison tabs; skips the /api/export step.
+(async () => {
+    const variant = new URLSearchParams(location.search).get('variant');
+    if (!variant) return;
+
+    const banner = document.createElement('div');
+    banner.textContent = `VARIANT: ${variant.toUpperCase()}`;
+    banner.style.cssText = 'position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:9999;padding:6px 14px;border-radius:14px;background:rgba(0,0,0,0.75);color:#fff;font:600 13px system-ui;letter-spacing:0.5px;';
+    document.body.appendChild(banner);
+
+    graph.showLoading();
+    try {
+        const res = await fetch(`/api/graph?variant=${encodeURIComponent(variant)}`);
+        const data = await res.json();
+        graph.renderGraph(data);
+        setTimeout(() => graph.hideLoading(), 300);
+    } catch (e) {
+        console.error('variant load failed', e);
+        graph.hideLoading();
+    }
+})();
 
 // DJ Set management
 graph.djSet = [];
@@ -1948,6 +2053,76 @@ MusicGraph.prototype.filterAndClose = function(genre) {
 function closeGenreModal() {
     document.getElementById('genre-modal').classList.remove('open');
 }
+
+function closeSongsModal() {
+    document.getElementById('songs-modal').classList.remove('open');
+}
+
+MusicGraph.prototype._buildFlatSongList = function() {
+    const flat = [];
+    this.nodes.forEach(node => {
+        (node.songs || []).forEach(s => {
+            flat.push({
+                title: s.title || '',
+                artist: node.name,
+                artistId: node.id,
+                album: (s.album || '').replace(/^[,&]+$/, ''),
+                year: s.year || '',
+                genre: node.genre || '',
+            });
+        });
+    });
+    flat.sort((a, b) => a.artist.localeCompare(b.artist) || a.title.localeCompare(b.title));
+    return flat;
+};
+
+MusicGraph.prototype._renderSongsModalList = function(songs) {
+    const container = document.getElementById('songsListContainer');
+    document.getElementById('songsModalCount').textContent = songs.length.toLocaleString();
+    if (songs.length === 0) {
+        container.innerHTML = '<p style="text-align:center;color:#888;padding:24px;">No songs match.</p>';
+        return;
+    }
+    const max = 1500;
+    const sliced = songs.slice(0, max);
+    const escape = (str) => String(str || '').replace(/[&<>"']/g, c => (
+        {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
+    ));
+    const rows = sliced.map(s => `
+        <li class="songs-modal-row" onclick="graph.focusNode('${escape(s.artistId)}'); closeSongsModal();">
+            <span class="song-title">${escape(s.title)}</span>
+            <span class="song-artist">${escape(s.artist)}</span>
+            <span class="song-album">${escape(s.album)}</span>
+        </li>
+    `).join('');
+    const truncatedNote = songs.length > max
+        ? `<p style="text-align:center;color:#888;padding:8px;">Showing first ${max.toLocaleString()} of ${songs.length.toLocaleString()} — narrow your search to see more.</p>`
+        : '';
+    container.innerHTML = `<ul class="songs-modal-list">${rows}</ul>${truncatedNote}`;
+};
+
+MusicGraph.prototype.showSongsModal = function() {
+    if (!this._allSongs) this._allSongs = this._buildFlatSongList();
+    this._renderSongsModalList(this._allSongs);
+    const search = document.getElementById('songsSearchInput');
+    search.value = '';
+    if (!search._wired) {
+        search.addEventListener('input', (e) => {
+            const q = e.target.value.trim().toLowerCase();
+            const filtered = !q
+                ? this._allSongs
+                : this._allSongs.filter(s =>
+                    s.title.toLowerCase().includes(q) ||
+                    s.artist.toLowerCase().includes(q) ||
+                    s.album.toLowerCase().includes(q)
+                );
+            this._renderSongsModalList(filtered);
+        });
+        search._wired = true;
+    }
+    document.getElementById('songs-modal').classList.add('open');
+    setTimeout(() => search.focus(), 100);
+};
 
 // Update stats to include genre count
 const originalUpdateStats = MusicGraph.prototype.updateStats;
