@@ -14,6 +14,26 @@ client_secret*.json
 backend/oauth.json
 oauth.json
 
+# YouTube Music auth (contains session cookies) - NEVER commit
+backend/browser.json
+backend/browser.json.bak
+browser.json
+
+# Runtime user data (profiles, groups, listening history) - contains PII
+backend/profiles/
+backend/groups/
+
+# Manual library pastes from YT Music page
+youtube-music-liked-songs-*.txt
+youtube-music-*.txt
+*.paste.txt
+
+# Playwright/test artifacts
+.playwright-mcp/
+
+# Last.fm similar-artists cache (runtime data)
+backend/lastfm_similar_cache.json
+
 # OS
 .DS_Store
 Thumbs.db
