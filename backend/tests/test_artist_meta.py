@@ -39,3 +39,13 @@ def test_tags_below_trust_threshold_are_discarded():
 def test_tags_above_trust_threshold_are_kept():
     entry = {"listeners": 530426, "tags": ["melodic dubstep", "electronic"]}
     assert trusted_tags(entry) == ["melodic dubstep", "electronic"]
+
+
+def test_exactly_at_threshold_is_not_flagged():
+    # The comparison is `<`, so 5000 itself is above the bar.
+    assert is_non_artist({"listeners": 5000, "tags": []}) is False
+
+
+def test_tags_exactly_at_trust_threshold_are_kept():
+    entry = {"listeners": 5000, "tags": ["dubstep"]}
+    assert trusted_tags(entry) == ["dubstep"]
