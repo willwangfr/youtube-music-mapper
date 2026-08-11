@@ -102,3 +102,91 @@ def test_scene_relative_ranks_within_genre_population():
 def test_scene_relative_is_none_without_a_reference():
     meta = {"A": {"listeners": 5_000, "tags": ["x"], "genre": "Dubstep/Bass"}}
     assert scene_relative_obscurity({"A": 1}, meta, {}) is None
+
+
+from taste_profile import (
+    decade_distribution, mood_distribution, taste_clusters, build_profile_stats,
+)
+
+LIBRARY = {"liked_songs": [
+    {"title": "Old", "album": None, "artists": [{"name": "A"}]},
+    {"title": "New", "album": None, "artists": [{"name": "A"}]},
+    {"title": "Unknown", "album": None, "artists": [{"name": "B"}]},
+]}
+YEARS = {"a|old": 1975, "a|new": 2021, "b|unknown": None}
+
+
+def test_decades_bucket_by_ten_years():
+    dist = decade_distribution(LIBRARY, YEARS)
+    assert dist["decades"] == {1970: 1, 2020: 1}
+
+
+def test_decade_coverage_reports_the_known_share():
+    assert decade_distribution(LIBRARY, YEARS)["coverage"] == pytest.approx(2 / 3)
+
+
+def test_decades_are_none_below_forty_percent_coverage():
+    sparse = {"a|old": 1975}
+    assert decade_distribution(LIBRARY, sparse) is None
+
+
+def test_median_year_uses_known_years_only():
+    assert decade_distribution(LIBRARY, YEARS)["median_year"] == 1998
+
+
+def test_moods_come_from_trusted_tags_only():
+    meta = {
+        "Loud": {"listeners": 900000, "tags": ["energetic"]},
+        "Tiny": {"listeners": 100, "tags": ["chill"]},
+    }
+    moods = mood_distribution({"Loud": 5, "Tiny": 5}, meta)
+    assert moods == {"Energetic": 1.0}
+
+
+def test_moods_are_empty_without_mappable_tags():
+    meta = {"A": {"listeners": 900000, "tags": ["seen live"]}}
+    assert mood_distribution({"A": 1}, meta) == {}
+
+
+def test_clusters_are_named_and_sorted_by_size():
+    graph = {
+        "nodes": [{"name": n} for n in ["A", "B", "C", "D", "E", "F"]],
+        "links": [
+            {"source": "A", "target": "B"}, {"source": "B", "target": "C"},
+            {"source": "D", "target": "E"}, {"source": "E", "target": "F"},
+        ],
+    }
+    meta = {n: {"genre": "Pop" if n in "ABC" else "Rock"} for n in "ABCDEF"}
+    counts = {n: 1 for n in "ABCDEF"}
+    clusters = taste_clusters(graph, counts, meta, min_size=3)
+    assert len(clusters) == 2
+    assert clusters[0]["size"] >= clusters[1]["size"]
+    assert {c["genre"] for c in clusters} == {"Pop", "Rock"}
+
+
+def test_small_clusters_are_dropped():
+    graph = {"nodes": [{"name": "A"}, {"name": "B"}], "links": [{"source": "A", "target": "B"}]}
+    assert taste_clusters(graph, {"A": 1, "B": 1}, {}, min_size=3) == []
+
+
+def test_build_profile_stats_has_every_documented_key():
+    graph = {"nodes": [{"name": "A", "song_count": 2, "songs": [{"title": "x"}, {"title": "y"}]}],
+             "links": []}
+    meta = {"A": {"listeners": 900000, "tags": ["pop"], "genre": "Pop"}}
+    stats = build_profile_stats(LIBRARY, meta, YEARS, {}, graph)
+    for key in ("artist_count", "song_count", "obscurity", "scene_obscurity",
+                "diversity", "genres", "top_artists", "decades", "median_year",
+                "year_coverage", "moods", "clusters", "one_song_share",
+                "top_genre_share", "largest_artist_songs", "gini"):
+        assert key in stats
+
+
+def test_one_song_share_matches_the_long_tail():
+    graph = {"nodes": [], "links": []}
+    library = {"liked_songs": (
+        [{"title": f"s{i}", "artists": [{"name": "Heavy"}]} for i in range(5)]
+        + [{"title": "t", "artists": [{"name": "Light"}]}]
+    )}
+    stats = build_profile_stats(library, {}, {}, {}, graph)
+    assert stats["one_song_share"] == pytest.approx(0.5)
+    assert stats["largest_artist_songs"] == 5
