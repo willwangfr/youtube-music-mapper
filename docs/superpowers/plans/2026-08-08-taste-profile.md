@@ -1364,10 +1364,25 @@ TAG_TO_GENRE = {
 }
 
 
+# genre_map.json predates GENRE_VOCABULARY and carries a few labels outside it.
+# Everything resolve_genre returns must be a vocabulary member, or diversity_score
+# (normalised by log(51)) can exceed 1.0 and the archetype thresholds break.
+CURATED_ALIASES = {
+    "Rock/Metal": "Rock",
+    "Grime": "Hip Hop",
+    "Reggae/Dancehall": "World Music",
+    "Cantopop": "Mandopop",
+}
+
+
 def resolve_genre(name: str, entry: dict, curated: dict) -> str:
+    from taste_profile import GENRE_VOCABULARY
+
     curated_genre = curated.get(name)
     if curated_genre:
-        return curated_genre
+        curated_genre = CURATED_ALIASES.get(curated_genre, curated_genre)
+        if curated_genre in GENRE_VOCABULARY:
+            return curated_genre
     for tag in trusted_tags(entry):
         mapped = TAG_TO_GENRE.get(tag)
         if mapped:
