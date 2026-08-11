@@ -13,7 +13,10 @@
 ## Global Constraints
 
 - All backend scripts run with `backend/` as the working directory; module imports are flat (`from artist_meta import ...`), matching the existing codebase.
-- **Run tests with `/opt/homebrew/bin/pytest`, not `python3 -m pytest`.** The default `python3` is 3.9 from CommandLineTools and has no pytest; `backend/venv` has no pytest either. The only working interpreter with pytest is the mambaforge Python 3.13 at `/opt/homebrew/bin/pytest`. Every test command in the tasks below should be read as `cd backend && /opt/homebrew/bin/pytest ...`.
+- **Run tests with `backend/venv/bin/python -m pytest`.** The project venv (Python 3.10) is the only interpreter that has both pytest
+  and the project's dependencies — `networkx` for Task 9's clustering and Flask for Task 13's endpoint tests.
+  The bare `python3` is 3.9 with no pytest; `/opt/homebrew/bin/pytest` has pytest but none of the project deps.
+  Read every test command below as `cd backend && ./venv/bin/python -m pytest ...`.
 - Obscurity scale bounds are exactly `OBSCURITY_MIN_LISTENERS = 10` and `OBSCURITY_MAX_LISTENERS = 10_000_000`. Do not change these; they were calibrated against the real library.
 - Non-artist threshold and tag-trust threshold are both exactly `5000` listeners.
 - Peer-percentile and peer-relative badge ranking require at least `5` stored profiles; below that they are hidden.
