@@ -11,8 +11,9 @@ from pathlib import Path
 import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from artist_meta import DATA_DIR  # noqa: E402
+from artist_meta import DATA_DIR, load_meta  # noqa: E402
 from enrich.lastfm_artist import API_URL, _Throttle, REQUESTS_PER_SECOND  # noqa: E402
+from enrich.lastfm_artist import fetch_missing as fetch_artists  # noqa: E402
 
 REFERENCE_PATH = DATA_DIR / "genre_reference.json"
 
@@ -55,14 +56,15 @@ class LastfmError(RuntimeError):
     """Last.fm reports failures as a 200 with an error envelope."""
 
 
-def parse_top_artists(payload: dict) -> list[int]:
+def parse_top_artist_names(payload: dict) -> list:
+    """tag.gettopartists returns names only - no listener counts - so the
+    population has to be assembled from artist.getInfo afterwards."""
     if "error" in payload:
         raise LastfmError(str(payload.get("message", payload["error"]))[:120])
     if "topartists" not in payload:
         raise LastfmError("no topartists in response")
     artists = (payload.get("topartists", {}) or {}).get("artist", []) or []
-    counts = [int(a.get("listeners", 0) or 0) for a in artists]
-    return sorted((c for c in counts if c > 0), reverse=True)
+    return [a["name"] for a in artists if a.get("name")]
 
 
 def _save(reference: dict) -> None:
@@ -74,7 +76,7 @@ def _save(reference: dict) -> None:
     tmp.replace(REFERENCE_PATH)
 
 
-def build_reference(api_key: str, limit: int = 500) -> dict:
+def build_reference(api_key: str, limit: int = 100) -> dict:
     throttle = _Throttle(REQUESTS_PER_SECOND)
     reference = {}
     if REFERENCE_PATH.exists():
@@ -97,12 +99,24 @@ def build_reference(api_key: str, limit: int = 500) -> dict:
                 timeout=15,
             )
             response.raise_for_status()
-            top = parse_top_artists(response.json())
+            names = parse_top_artist_names(response.json())
         except Exception as exc:
             # Left absent rather than cached, so the next run retries it.
             print(f"  {genre}: {exc}", flush=True)
             continue
-        reference[genre] = top
+        # Listener counts come from artist.getInfo, which caches them into the
+        # shared store so the cost is paid once across all genres.
+        fetch_artists(names, api_key)
+        meta = load_meta()
+        population = sorted(
+            (meta[n]["listeners"] for n in names
+             if n in meta and meta[n].get("listeners")),
+            reverse=True,
+        )
+        if not population:
+            print(f"  {genre}: no listener data resolved, leaving for retry", flush=True)
+            continue
+        reference[genre] = population
         _save(reference)
 
     return reference

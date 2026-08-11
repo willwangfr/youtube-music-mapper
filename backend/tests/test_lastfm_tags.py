@@ -1,6 +1,6 @@
 import pytest
 
-from enrich.lastfm_tags import GENRE_TAG_QUERIES, parse_top_artists
+from enrich.lastfm_tags import GENRE_TAG_QUERIES, parse_top_artist_names
 
 
 def test_every_query_maps_to_a_known_genre():
@@ -8,40 +8,33 @@ def test_every_query_maps_to_a_known_genre():
     assert set(GENRE_TAG_QUERIES).issubset(set(GENRE_VOCABULARY))
 
 
-def test_parse_returns_descending_listener_counts():
-    payload = {"topartists": {"artist": [
-        {"name": "A", "listeners": "100"},
-        {"name": "B", "listeners": "5000"},
-        {"name": "C", "listeners": "300"},
-    ]}}
-    assert parse_top_artists(payload) == [5000, 300, 100]
+def test_parse_returns_artist_names_in_order():
+    payload = {"topartists": {"artist": [{"name": "A"}, {"name": "B"}]}}
+    assert parse_top_artist_names(payload) == ["A", "B"]
 
 
-def test_parse_skips_entries_without_listeners():
-    payload = {"topartists": {"artist": [
-        {"name": "A", "listeners": "0"},
-        {"name": "B", "listeners": "42"},
-    ]}}
-    assert parse_top_artists(payload) == [42]
+def test_parse_skips_entries_without_a_name():
+    payload = {"topartists": {"artist": [{"mbid": "x"}, {"name": "B"}]}}
+    assert parse_top_artist_names(payload) == ["B"]
 
 
 def test_parse_handles_empty_payload():
     from enrich.lastfm_tags import LastfmError
     with pytest.raises(LastfmError):
-        parse_top_artists({})
+        parse_top_artist_names({})
 
 
 def test_error_envelope_raises():
     from enrich.lastfm_tags import LastfmError
     with pytest.raises(LastfmError):
-        parse_top_artists({"error": 6, "message": "invalid tag"})
+        parse_top_artist_names({"error": 6, "message": "invalid tag"})
 
 
 def test_missing_topartists_key_raises():
     from enrich.lastfm_tags import LastfmError
     with pytest.raises(LastfmError):
-        parse_top_artists({"something": "else"})
+        parse_top_artist_names({"something": "else"})
 
 
 def test_genuinely_empty_population_is_not_an_error():
-    assert parse_top_artists({"topartists": {"artist": []}}) == []
+    assert parse_top_artist_names({"topartists": {"artist": []}}) == []
