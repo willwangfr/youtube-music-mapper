@@ -386,10 +386,18 @@ def api_profile_stats(profile_id):
 
 @app.route("/api/profile/<profile_id>", methods=["DELETE"])
 def api_delete_profile(profile_id):
-    """Delete a profile."""
-    if delete_profile(profile_id):
+    """Delete a profile. Requires the creator's capability token."""
+    body = request.get_json(silent=True) or {}
+    token = request.headers.get("X-Owner-Token") or body.get("owner_token") or ""
+
+    outcome = delete_profile(profile_id, token)
+    if outcome == "deleted":
         return jsonify({"success": True})
-    return jsonify({"error": "Profile not found"}), 404
+    if outcome == "not_found":
+        return jsonify({"error": "Profile not found"}), 404
+    # "forbidden" - deliberately identical to a generic denial; do not reveal
+    # via this response whether profile_id exists.
+    return jsonify({"error": "Not authorized to delete this profile"}), 403
 
 
 @app.route("/api/compare/<profile_id1>/<profile_id2>")

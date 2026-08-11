@@ -122,10 +122,14 @@ const deleteBtn = el('deleteProfile');
 if (localStorage.getItem('myProfileId') === profileId) {
     deleteBtn.addEventListener('click', async () => {
         if (!confirm('Delete this profile permanently? The share link will stop working.')) return;
-        await fetch(`/api/profile/${profileId}`, { method: 'DELETE' });
+        await fetch(`/api/profile/${profileId}`, {
+            method: 'DELETE',
+            headers: { 'X-Owner-Token': localStorage.getItem('ownerToken:' + profileId) || '' }
+        });
         if (localStorage.getItem('myProfileId') === profileId) {
             localStorage.removeItem('myProfileId');
         }
+        localStorage.removeItem('ownerToken:' + profileId);
         window.location.href = '/';
     });
 } else {

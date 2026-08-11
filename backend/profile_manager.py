@@ -6,6 +6,8 @@ Handles profile creation, storage, and retrieval.
 
 import json
 import hashlib
+import hmac
+import secrets
 import time
 import os
 from pathlib import Path
@@ -16,6 +18,10 @@ from taste_similarity import compute_taste_vector, extract_artist_counts
 # Profiles directory
 PROFILES_DIR = Path(__file__).parent / "profiles"
 GROUPS_DIR = Path(__file__).parent / "groups"
+
+
+def _hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
 
 
 def ensure_dirs():
@@ -64,11 +70,16 @@ def create_profile(music_data: dict, name: str = "", public: bool = False) -> di
     # Get artist counts for stats
     artist_counts = extract_artist_counts(music_data)
 
+    # Mint an ownership capability token. Only its hash is ever persisted;
+    # the raw token exists in plaintext only in this function's return value.
+    owner_token = secrets.token_urlsafe(32)
+
     profile = {
         "id": profile_id,
         "name": name or f"Music Fan #{profile_id[:4].upper()}",
         "created_at": int(time.time()),
         "public": public,
+        "owner_token_hash": _hash_token(owner_token),
         "stats": {
             "artist_count": len(artist_counts),
             "song_count": sum(artist_counts.values()),
@@ -92,7 +103,8 @@ def create_profile(music_data: dict, name: str = "", public: bool = False) -> di
         "id": profile_id,
         "name": profile["name"],
         "stats": profile["stats"],
-        "share_url": f"/p/{profile_id}"
+        "share_url": f"/p/{profile_id}",
+        "owner_token": owner_token
     }
 
 
@@ -126,6 +138,8 @@ def get_profile(profile_id: str, include_music_data: bool = False) -> Optional[d
             "taste_vector": profile["taste_vector"]
         }
 
+    # Full version includes everything stored except the ownership secret.
+    profile.pop("owner_token_hash", None)
     return profile
 
 
@@ -178,13 +192,28 @@ def update_public_index(profile: dict):
         json.dump(index, f, indent=2)
 
 
-def delete_profile(profile_id: str) -> bool:
-    """Delete a profile."""
+def delete_profile(profile_id: str, token: str) -> str:
+    """Delete a profile, gated by its ownership capability token.
+
+    Returns "deleted", "not_found", or "forbidden". Profiles created before
+    ownership tokens existed have no owner_token_hash; those fail closed
+    (always "forbidden") rather than being treated as deletable by anyone.
+    """
     ensure_dirs()
     profile_path = PROFILES_DIR / f"{profile_id}.json"
 
     if not profile_path.exists():
-        return False
+        return "not_found"
+
+    with open(profile_path) as f:
+        profile = json.load(f)
+
+    stored_hash = profile.get("owner_token_hash")
+    if not stored_hash:
+        return "forbidden"
+
+    if not token or not hmac.compare_digest(stored_hash, _hash_token(token)):
+        return "forbidden"
 
     # Remove from public index
     index_path = PROFILES_DIR / "_public_index.json"
@@ -197,7 +226,7 @@ def delete_profile(profile_id: str) -> bool:
 
     # Delete profile file
     profile_path.unlink()
-    return True
+    return "deleted"
 
 
 # ============ Group Management ============
@@ -321,5 +350,5 @@ if __name__ == "__main__":
     print(f"Joined: {joined}")
 
     print("\nCleaning up...")
-    delete_profile(result["id"])
+    delete_profile(result["id"], result["owner_token"])
     print("Done!")

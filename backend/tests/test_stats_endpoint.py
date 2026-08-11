@@ -1,5 +1,6 @@
 import pytest
 
+import profile_manager
 import server
 
 
@@ -34,3 +35,16 @@ def test_peer_percentile_is_none_below_five_profiles(client, monkeypatch):
     monkeypatch.setattr(server, "list_public_profiles", lambda limit=100: [{}, {}])
 
     assert client.get("/api/profile/abc12345/stats").get_json()["peer_percentile"] is None
+
+
+def test_delete_without_owner_token_returns_403_and_profile_survives(client, monkeypatch, tmp_path):
+    monkeypatch.setattr(profile_manager, "PROFILES_DIR", tmp_path / "profiles")
+    monkeypatch.setattr(profile_manager, "GROUPS_DIR", tmp_path / "groups")
+    data = {"liked_songs": [{"title": "s", "artists": [{"name": "A"}]}]}
+    created = profile_manager.create_profile(data, name="Test")
+    profile_id = created["id"]
+
+    resp = client.delete(f"/api/profile/{profile_id}")
+
+    assert resp.status_code == 403
+    assert (tmp_path / "profiles" / f"{profile_id}.json").exists()

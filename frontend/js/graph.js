@@ -2406,6 +2406,7 @@ async function createAndShareProfile() {
             return;
         }
         localStorage.setItem('myProfileId', data.id);
+        localStorage.setItem('ownerToken:' + data.id, data.owner_token);
         const shareUrl = window.location.origin + '/p/' + data.id;
         const copied = await copyToClipboard(shareUrl);
         if (copied) {
