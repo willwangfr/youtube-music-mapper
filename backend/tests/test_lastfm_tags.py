@@ -27,4 +27,22 @@ def test_parse_skips_entries_without_listeners():
 
 
 def test_parse_handles_empty_payload():
-    assert parse_top_artists({}) == []
+    from enrich.lastfm_tags import LastfmError
+    with pytest.raises(LastfmError):
+        parse_top_artists({})
+
+
+def test_error_envelope_raises():
+    from enrich.lastfm_tags import LastfmError
+    with pytest.raises(LastfmError):
+        parse_top_artists({"error": 6, "message": "invalid tag"})
+
+
+def test_missing_topartists_key_raises():
+    from enrich.lastfm_tags import LastfmError
+    with pytest.raises(LastfmError):
+        parse_top_artists({"something": "else"})
+
+
+def test_genuinely_empty_population_is_not_an_error():
+    assert parse_top_artists({"topartists": {"artist": []}}) == []
