@@ -53,8 +53,10 @@ def fetch_missing(pairs, save_every: int = 50) -> dict:
 
     todo = [(a, t) for a, t in pairs if track_key(a, t) not in years]
     done = 0
-    for artist, title in todo:
-        time.sleep(SECONDS_PER_REQUEST)
+    for i, (artist, title) in enumerate(todo):
+        if i > 0:
+            # No prior request in this run to space against yet.
+            time.sleep(SECONDS_PER_REQUEST)
         key = track_key(artist, title)
         try:
             response = requests.get(
