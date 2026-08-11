@@ -62,7 +62,9 @@ frontend-v2/graph_data.json
 .superpowers/
 
 # Screenshots — previous ones captured full desktops with personal data.
+# Only the app-only screenshot is allowed through.
 *.png
+!screenshot.png
 
 # Regenerable image-URL cache (rebuild: python fetch_artist_images.py)
 backend/artist_images.json

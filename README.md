@@ -2,7 +2,7 @@
 
 Visualize your music library as an interactive network graph. See how artists connect through collaborations and similar styles, discover patterns in your music taste, and compare your taste with friends.
 
-_Screenshot omitted: the previous one captured a full desktop. Run the app on the bundled sample data to see the visualization._
+![Screenshot](screenshot.png)
 
 ## Features
 
