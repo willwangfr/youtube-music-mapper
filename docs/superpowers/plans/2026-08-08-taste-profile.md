@@ -1977,9 +1977,20 @@ META = {
 
 
 def test_sharing_an_obscure_artist_scores_higher_than_a_famous_one():
-    famous = rarity_weighted_overlap({"Coldplay": 1}, {"Coldplay": 1}, META)
-    obscure = rarity_weighted_overlap({"Obscure Act": 1}, {"Obscure Act": 1}, META)
-    assert obscure > famous
+    # Both people own both artists' worth of listening; they differ only in
+    # WHICH one they have in common. Identical libraries would both score 1.0
+    # regardless of weight, so the rarity effect is only visible on a partial
+    # overlap.
+    me = {"Coldplay": 1, "Obscure Act": 1}
+    shares_the_famous_one = rarity_weighted_overlap(me, {"Coldplay": 1}, META)
+    shares_the_obscure_one = rarity_weighted_overlap(me, {"Obscure Act": 1}, META)
+    assert shares_the_obscure_one > shares_the_famous_one
+
+
+def test_identical_libraries_score_one_whatever_the_rarity():
+    # Weight cancels when min == max, so rarity cannot move this.
+    for artist in ("Coldplay", "Obscure Act"):
+        assert rarity_weighted_overlap({artist: 1}, {artist: 1}, META) == 1.0
 
 
 def test_identical_libraries_score_one():
