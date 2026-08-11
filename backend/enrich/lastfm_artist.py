@@ -32,6 +32,9 @@ def parse_artist_info(payload: dict) -> dict:
         return {"missing": True}
     stats = artist.get("stats", {}) or {}
     tags = (artist.get("tags", {}) or {}).get("tag", []) or []
+    # Last.fm collapses a single-element tag collection to a bare object.
+    if isinstance(tags, dict):
+        tags = [tags]
     return {
         "lastfm_name": artist.get("name"),
         "listeners": int(stats.get("listeners", 0) or 0),
@@ -54,9 +57,17 @@ class _Throttle:
             self._last = time.monotonic()
 
 
+def needs_fetch(name: str, meta: dict) -> bool:
+    """True when this artist has never been fetched, or only failed transiently."""
+    entry = meta.get(name)
+    return entry is None or bool(entry.get("retry"))
+
+
 def fetch_missing(names, api_key: str, save_every: int = 100) -> dict:
     meta = load_meta()
-    todo = sorted({n for n in names if n not in meta})
+    # A transient failure must not look like a completed fetch, or one timeout
+    # blacklists that artist for every future run.
+    todo = sorted({n for n in names if needs_fetch(n, meta)})
     if not todo:
         return meta
 
@@ -78,7 +89,8 @@ def fetch_missing(names, api_key: str, save_every: int = 100) -> dict:
             )
             return name, parse_artist_info(response.json())
         except Exception as exc:
-            return name, {"error": str(exc)[:120]}
+            # retry=True keeps this name in the todo set on the next run.
+            return name, {"error": str(exc)[:120], "retry": True}
 
     done = 0
     with ThreadPoolExecutor(max_workers=5) as pool:
