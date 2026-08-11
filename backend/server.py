@@ -118,24 +118,37 @@ def export_data():
     })
 
 
-VARIANT_FILES = {
-    "sparse": os.path.expanduser("~/Documents/youtube-music-mapper-backups/graph_data_2026-05-10_paste.json"),
-    "enriched": os.path.expanduser("~/Documents/youtube-music-mapper-backups/graph_data_2026-05-10_enriched.json"),
-}
+# Optional local A/B comparison of alternate datasets, off unless configured.
+# Set GRAPH_VARIANT_DIR to a directory holding graph_data_<name>.json files.
+VARIANT_DIR = os.environ.get("GRAPH_VARIANT_DIR", "")
+
+
+def variant_path(name):
+    """Resolve ?variant=<name> to a file, refusing anything but a bare name."""
+    if not VARIANT_DIR or not name or not re.fullmatch(r"[A-Za-z0-9_-]+", name):
+        return None
+    return os.path.join(VARIANT_DIR, f"graph_data_{name}.json")
 
 
 @app.route("/api/graph")
 def get_graph():
     """Get graph data for visualization."""
-    variant = request.args.get("variant")
-    if variant in VARIANT_FILES and os.path.exists(VARIANT_FILES[variant]):
-        with open(VARIANT_FILES[variant], "r") as f:
+    path = variant_path(request.args.get("variant"))
+    if path and os.path.exists(path):
+        with open(path, "r") as f:
             return jsonify(json.load(f))
 
     # Check if we have pre-built graph data
     graph_file = "../frontend/graph_data.json"
     if os.path.exists(graph_file):
         with open(graph_file, "r") as f:
+            return jsonify(json.load(f))
+
+    # A personal library is gitignored, so a fresh clone has none. Ship a small
+    # sample so the visualization has something to render before any import.
+    sample_file = "../frontend/graph_data.sample.json"
+    if os.path.exists(sample_file):
+        with open(sample_file, "r") as f:
             return jsonify(json.load(f))
 
     # Try to build from music_data.json

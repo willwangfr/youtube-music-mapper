@@ -50,3 +50,10 @@ node_modules/
 
 # Enrichment caches (regenerable, and large)
 backend/data/
+
+# Personal listening library — regenerate by importing your own data.
+# frontend/graph_data.sample.json ships instead so a fresh clone renders.
+frontend/graph_data.json
+frontend/graph_data.json.bak
+frontend/graph_data.json.old
+frontend-v2/graph_data.json

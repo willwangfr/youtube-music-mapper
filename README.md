@@ -24,6 +24,12 @@ Visualize your music library as an interactive network graph. See how artists co
   - **Set Builder**: Auto-generate DJ sets based on energy flow or genre journey
   - **Export**: Export sets to text or Nicotine++ format for Soulseek searching
 
+## Sample data
+
+A fresh clone ships `frontend/graph_data.sample.json` — a 150-artist sample so the
+visualization renders before you import anything. Your own library builds to
+`frontend/graph_data.json`, which is gitignored and takes precedence once it exists.
+
 ## Prerequisites
 
 - Python 3.8+
