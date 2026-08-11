@@ -20,6 +20,17 @@ REQUESTS_PER_SECOND = 5.0
 _SLASHES = re.compile(r"[/\\]+")
 _WHITESPACE = re.compile(r"\s+")
 
+_API_KEY_IN_URL = re.compile(r"(api_key=)[^&\s]+")
+
+
+def redact(text) -> str:
+    """Requests puts the full URL in HTTPError messages, api_key included.
+
+    Duplicated from enrich.lastfm_tags.redact: importing it here would be
+    circular, since lastfm_tags already imports from this module.
+    """
+    return _API_KEY_IN_URL.sub(r"\1<redacted>", str(text))
+
 
 def normalize_for_lookup(name: str) -> str:
     """Last.fm rejects some literal separator characters in artist names."""
@@ -90,7 +101,7 @@ def fetch_missing(names, api_key: str, save_every: int = 100) -> dict:
             return name, parse_artist_info(response.json())
         except Exception as exc:
             # retry=True keeps this name in the todo set on the next run.
-            return name, {"error": str(exc)[:120], "retry": True}
+            return name, {"error": redact(exc)[:120], "retry": True}
 
     done = 0
     with ThreadPoolExecutor(max_workers=5) as pool:

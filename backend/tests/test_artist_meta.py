@@ -100,3 +100,12 @@ def test_every_curated_alias_target_is_in_the_vocabulary():
     from artist_meta import CURATED_ALIASES
     from taste_profile import GENRE_VOCABULARY
     assert set(CURATED_ALIASES.values()) <= set(GENRE_VOCABULARY)
+
+
+def test_every_tag_mapping_target_is_in_the_vocabulary():
+    # resolve_genre returns TAG_TO_GENRE values unvalidated, unlike the
+    # CURATED_ALIASES path above — this is the same shape of bug that guard
+    # was written for, just on the other lookup table.
+    from artist_meta import TAG_TO_GENRE
+    from taste_profile import GENRE_VOCABULARY
+    assert set(TAG_TO_GENRE.values()) <= set(GENRE_VOCABULARY)

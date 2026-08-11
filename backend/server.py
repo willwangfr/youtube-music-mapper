@@ -362,6 +362,12 @@ def api_profile_stats(profile_id):
 
     peers = list_public_profiles(limit=500)
     percentile = None
+    # Known-incomplete: profile_manager.create_profile never wrote "obscurity"
+    # into stats, so this list is always empty and peer_percentile stays None.
+    # Computing obscurity for every peer here would be too expensive to do
+    # per-request; the real fix is storing it at profile creation time. The
+    # UI already hides the percentile line when it's None, so this is safe
+    # as-is, just incomplete.
     if len(peers) >= MIN_PEERS_FOR_RELATIVE_RANKING and stats["obscurity"] is not None:
         scores = [p.get("stats", {}).get("obscurity") for p in peers]
         scores = [s for s in scores if s is not None]
@@ -403,7 +409,7 @@ def api_compare_profiles(profile_id1, profile_id2):
     profile2 = get_profile(profile_id2)
 
     genre_map = load_genre_map()
-    result = calculate_similarity(music_data1, music_data2, genre_map)
+    result = calculate_similarity(music_data1, music_data2, genre_map, artist_meta=load_meta())
 
     # Add profile info
     result["profile1"] = {

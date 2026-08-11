@@ -106,6 +106,11 @@ CURATED_ALIASES = {
     "Grime": "Hip Hop",
     "Reggae/Dancehall": "World Music",
     "Cantopop": "Mandopop",
+    "Experimental Bass": "Electronic/Experimental",
+    "World Bass": "World Music",
+    "World": "World Music",
+    "Indian/Bollywood": "World Music",
+    "Electro House": "House",
 }
 
 

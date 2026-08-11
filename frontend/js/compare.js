@@ -372,53 +372,12 @@ function closeModal() {
 }
 
 async function createProfile() {
-    const name = document.getElementById('profileName').value.trim();
-
-    try {
-        const response = await fetch('/api/profile/create', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, public: true })
-        });
-
-        const data = await response.json();
-
-        if (data.error) {
-            throw new Error(data.error);
-        }
-
-        // Save profile ID
-        myProfileId = data.id;
-        localStorage.setItem('myProfileId', data.id);
-
-        // Show share link
-        const resultDiv = document.getElementById('profileResult');
-        const shareUrl = document.getElementById('shareUrl');
-        shareUrl.value = window.location.origin + data.share_url;
-        resultDiv.style.display = 'block';
-
-        // If we were comparing, reload to show comparison
-        if (targetProfileId) {
-            setTimeout(() => {
-                window.location.reload();
-            }, 2000);
-        }
-
-        // If joining a group, join it
-        if (groupId) {
-            await fetch(`/api/group/${groupId}/join`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ profile_id: data.id })
-            });
-            setTimeout(() => {
-                window.location.href = `/group/${groupId}`;
-            }, 2000);
-        }
-
-    } catch (error) {
-        alert('Error creating profile: ' + error.message);
-    }
+    // This page has no music data of its own to send (no importer, and
+    // graph.toLibrary() doesn't exist here), so profile creation has to
+    // happen on the map, which does. Send the visitor there rather than
+    // firing a request that can only 400.
+    alert('Create your profile from the map first — load your music there, then click "Share My Taste".');
+    window.location.href = '/';
 }
 
 function copyShareLink() {

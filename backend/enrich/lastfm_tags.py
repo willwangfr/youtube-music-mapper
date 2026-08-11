@@ -5,6 +5,7 @@ same scene; using their own library as that population would be circular.
 """
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -16,6 +17,13 @@ from enrich.lastfm_artist import API_URL, _Throttle, REQUESTS_PER_SECOND  # noqa
 from enrich.lastfm_artist import fetch_missing as fetch_artists  # noqa: E402
 
 REFERENCE_PATH = DATA_DIR / "genre_reference.json"
+
+_API_KEY_IN_URL = re.compile(r"(api_key=)[^&\s]+")
+
+
+def redact(text) -> str:
+    """Requests puts the full URL in HTTPError messages, api_key included."""
+    return _API_KEY_IN_URL.sub(r"\1<redacted>", str(text))
 
 # Only genres with a real Last.fm tag equivalent. Buckets like "Other",
 # "Mix/Compilation", and "Sample Pack" have no scene to compare against.
@@ -102,7 +110,7 @@ def build_reference(api_key: str, limit: int = 100) -> dict:
             names = parse_top_artist_names(response.json())
         except Exception as exc:
             # Left absent rather than cached, so the next run retries it.
-            print(f"  {genre}: {exc}", flush=True)
+            print(f"  {genre}: {redact(exc)}", flush=True)
             continue
         # Listener counts come from artist.getInfo, which caches them into the
         # shared store so the cost is paid once across all genres.

@@ -118,13 +118,18 @@ el('copyLink').addEventListener('click', () => {
     el('copyLink').textContent = 'Copied';
 });
 
-el('deleteProfile').addEventListener('click', async () => {
-    if (!confirm('Delete this profile permanently? The share link will stop working.')) return;
-    await fetch(`/api/profile/${profileId}`, { method: 'DELETE' });
-    if (localStorage.getItem('myProfileId') === profileId) {
-        localStorage.removeItem('myProfileId');
-    }
-    window.location.href = '/';
-});
+const deleteBtn = el('deleteProfile');
+if (localStorage.getItem('myProfileId') === profileId) {
+    deleteBtn.addEventListener('click', async () => {
+        if (!confirm('Delete this profile permanently? The share link will stop working.')) return;
+        await fetch(`/api/profile/${profileId}`, { method: 'DELETE' });
+        if (localStorage.getItem('myProfileId') === profileId) {
+            localStorage.removeItem('myProfileId');
+        }
+        window.location.href = '/';
+    });
+} else {
+    deleteBtn.remove();
+}
 
 load();

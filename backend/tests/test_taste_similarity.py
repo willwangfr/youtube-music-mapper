@@ -44,6 +44,21 @@ def test_unknown_artists_still_contribute():
     assert rarity_weighted_overlap({"Ghost": 1}, {"Ghost": 1}, {}) == pytest.approx(1.0)
 
 
+def test_non_artists_get_neutral_weight_not_a_rarity_bonus():
+    # Same listener count (169) as each other, so any score difference below
+    # comes only from is_non_artist, not from artist_obscurity.
+    meta = {
+        "Real Obscure Artist": {"listeners": 169, "tags": ["dubstep"]},
+        "Lost Lands Music Festival": {"listeners": 169, "tags": []},
+    }
+    me = {"Real Obscure Artist": 1, "Lost Lands Music Festival": 1}
+    shares_the_real_artist = rarity_weighted_overlap(me, {"Real Obscure Artist": 1}, meta)
+    shares_the_channel = rarity_weighted_overlap(me, {"Lost Lands Music Festival": 1}, meta)
+    # A repost channel must not get the same rarity bonus a genuinely obscure
+    # artist gets just because its "listener" count is also low.
+    assert shares_the_real_artist > shares_the_channel
+
+
 def test_calculate_similarity_without_meta_matches_previous_behaviour():
     p1 = {"liked_songs": [{"title": "a", "artists": [{"name": "Coldplay"}]}]}
     p2 = {"liked_songs": [{"title": "b", "artists": [{"name": "Coldplay"}]}]}

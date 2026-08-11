@@ -83,6 +83,7 @@ def rarity_weighted_overlap(counts1: Dict[str, int], counts2: Dict[str, int],
     """Weighted overlap where each artist's contribution scales with how few
     people listen to them. Unknown artists get neutral weight."""
     from taste_profile import artist_obscurity
+    from artist_meta import is_non_artist
 
     all_artists = set(counts1) | set(counts2)
     if not all_artists:
@@ -91,9 +92,14 @@ def rarity_weighted_overlap(counts1: Dict[str, int], counts2: Dict[str, int],
     min_sum = max_sum = 0.0
     for artist in all_artists:
         entry = artist_meta.get(artist) or {}
-        score = artist_obscurity(entry.get("listeners", 0))
-        # Neutral weight of 1.0 for unknowns; obscure artists reach 2.0.
-        weight = 1.0 + (score / 100.0) if score is not None else 1.0
+        # Non-artists (repost channels, etc.) don't get a rarity bonus just
+        # because few people "listen" to them.
+        if entry and is_non_artist(entry):
+            weight = 1.0
+        else:
+            score = artist_obscurity(entry.get("listeners", 0))
+            # Neutral weight of 1.0 for unknowns; obscure artists reach 2.0.
+            weight = 1.0 + (score / 100.0) if score is not None else 1.0
         c1, c2 = counts1.get(artist, 0), counts2.get(artist, 0)
         min_sum += weight * min(c1, c2)
         max_sum += weight * max(c1, c2)

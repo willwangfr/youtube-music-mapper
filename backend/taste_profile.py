@@ -19,8 +19,8 @@ GENRE_VOCABULARY = (
     "Trap/Bass", "UK House", "World Music",
 )
 
-# Calibrated against a real 1,157-artist library: these bounds clip 23 artists,
-# where 100..5M clipped 113 and 50..20M clipped 49.
+# Chosen so the scale spans plausible real listener counts without clipping
+# a meaningful share of a real library.
 OBSCURITY_MIN_LISTENERS = 10
 OBSCURITY_MAX_LISTENERS = 10_000_000
 
@@ -152,8 +152,12 @@ def mood_distribution(counts: dict, meta: dict) -> dict:
 def taste_clusters(graph: dict, counts: dict, meta: dict,
                    min_size: int = MIN_CLUSTER_SIZE) -> list:
     g = nx.Graph()
+    # Cluster only the artists this profile actually has. The caller passes the
+    # server's own graph for its edge topology, so seeding every node would
+    # show one person's library on another person's page.
     for node in graph.get("nodes", []):
-        g.add_node(node["name"])
+        if node["name"] in counts:
+            g.add_node(node["name"])
     for link in graph.get("links", []):
         source, target = link.get("source"), link.get("target")
         source = source if isinstance(source, str) else (source or {}).get("id")

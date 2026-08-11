@@ -38,3 +38,11 @@ def test_missing_topartists_key_raises():
 
 def test_genuinely_empty_population_is_not_an_error():
     assert parse_top_artist_names({"topartists": {"artist": []}}) == []
+
+
+def test_redact_removes_the_api_key():
+    from enrich.lastfm_tags import redact
+    msg = "403 for url: https://ws.audioscrobbler.com/2.0/?method=x&api_key=abc123secret&format=json"
+    out = redact(msg)
+    assert "abc123secret" not in out
+    assert "<redacted>" in out

@@ -185,6 +185,23 @@ def test_clusters_accept_d3_object_links():
     assert clusters[0]["size"] == 3
 
 
+def test_clusters_exclude_artists_absent_from_the_profile():
+    graph = {"nodes": [{"name": n} for n in "ABCDEF"],
+             "links": [{"source": "A", "target": "B"}, {"source": "B", "target": "C"},
+                       {"source": "D", "target": "E"}, {"source": "E", "target": "F"}]}
+    # This profile owns only the first component.
+    counts = {n: 1 for n in "ABC"}
+    clusters = taste_clusters(graph, counts, {}, min_size=3)
+    members = {m for c in clusters for m in c["members"]}
+    assert members == {"A", "B", "C"}
+
+
+def test_a_profile_sharing_nothing_with_the_graph_gets_no_clusters():
+    graph = {"nodes": [{"name": n} for n in "ABCDEF"],
+             "links": [{"source": "A", "target": "B"}]}
+    assert taste_clusters(graph, {"Stranger": 1}, {}, min_size=3) == []
+
+
 def test_build_profile_stats_has_every_documented_key():
     graph = {"nodes": [{"name": "A", "song_count": 2, "songs": [{"title": "x"}, {"title": "y"}]}],
              "links": []}
