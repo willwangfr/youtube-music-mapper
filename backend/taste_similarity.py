@@ -78,6 +78,29 @@ def weighted_overlap(counts1: Dict[str, int], counts2: Dict[str, int]) -> float:
     return min_sum / max_sum if max_sum > 0 else 0.0
 
 
+def rarity_weighted_overlap(counts1: Dict[str, int], counts2: Dict[str, int],
+                            artist_meta: Dict[str, dict]) -> float:
+    """Weighted overlap where each artist's contribution scales with how few
+    people listen to them. Unknown artists get neutral weight."""
+    from taste_profile import artist_obscurity
+
+    all_artists = set(counts1) | set(counts2)
+    if not all_artists:
+        return 1.0
+
+    min_sum = max_sum = 0.0
+    for artist in all_artists:
+        entry = artist_meta.get(artist) or {}
+        score = artist_obscurity(entry.get("listeners", 0))
+        # Neutral weight of 1.0 for unknowns; obscure artists reach 2.0.
+        weight = 1.0 + (score / 100.0) if score is not None else 1.0
+        c1, c2 = counts1.get(artist, 0), counts2.get(artist, 0)
+        min_sum += weight * min(c1, c2)
+        max_sum += weight * max(c1, c2)
+
+    return min_sum / max_sum if max_sum > 0 else 0.0
+
+
 def extract_artist_counts(music_data: dict) -> Dict[str, int]:
     """Extract artist -> song count mapping from music data."""
     counts = Counter()
@@ -111,7 +134,8 @@ def extract_genre_vector(music_data: dict, genre_map: dict) -> Dict[str, float]:
     return {genre: count / total for genre, count in genre_counts.items()}
 
 
-def calculate_similarity(profile1: dict, profile2: dict, genre_map: dict = None) -> dict:
+def calculate_similarity(profile1: dict, profile2: dict, genre_map: dict = None,
+                         artist_meta: dict = None) -> dict:
     """
     Calculate comprehensive similarity between two music profiles.
 
@@ -119,6 +143,9 @@ def calculate_similarity(profile1: dict, profile2: dict, genre_map: dict = None)
         profile1: First user's music_data
         profile2: Second user's music_data
         genre_map: Optional artist -> genre mapping
+        artist_meta: Optional artist -> {listeners, tags} mapping; when
+            provided, shared artists are weighted by rarity instead of
+            counted uniformly.
 
     Returns:
         dict with similarity scores and shared/unique artists
@@ -134,7 +161,10 @@ def calculate_similarity(profile1: dict, profile2: dict, genre_map: dict = None)
 
     # Calculate individual metrics
     artist_jaccard = jaccard_similarity(artists1, artists2)
-    artist_weighted = weighted_overlap(counts1, counts2)
+    if artist_meta:
+        artist_weighted = rarity_weighted_overlap(counts1, counts2, artist_meta)
+    else:
+        artist_weighted = weighted_overlap(counts1, counts2)
 
     # Genre similarity
     genre_vec1 = extract_genre_vector(profile1, genre_map)
