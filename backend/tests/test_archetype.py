@@ -87,3 +87,18 @@ def test_badges_carry_a_label_and_value():
              "largest_artist_songs": 2, "clusters": [], "song_count": 100}
     badge = compute_badges(stats)[0]
     assert set(badge) >= {"id", "label", "value"}
+
+
+def test_other_never_appears_in_the_tagline():
+    stats = {"obscurity": 20.0, "diversity": 0.7, "median_year": 2021,
+             "genres": {"Other": 0.6, "Dubstep/Bass": 0.4}}
+    result = resolve_archetype(stats)
+    assert "Other" not in result["tagline"]
+    assert "Dubstep/Bass" in result["tagline"]
+
+
+def test_an_entirely_unresolved_library_names_no_genre():
+    result = resolve_archetype({"obscurity": 20.0, "diversity": 0.7,
+                                "median_year": 2021, "genres": {"Other": 1.0}})
+    assert "Other" not in result["tagline"]
+    assert result["name"]

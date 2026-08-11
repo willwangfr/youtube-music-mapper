@@ -57,7 +57,9 @@ def resolve_archetype(stats: dict) -> dict:
     diversity = diversity_axis(stats.get("diversity"))
     era = era_axis(stats.get("median_year"))
 
-    genres = stats.get("genres") or {}
+    # "Other" is the absence of a genre, not one to be "built on" — a library
+    # with thin coverage would otherwise be described as "Built on Other".
+    genres = {g: w for g, w in (stats.get("genres") or {}).items() if g != "Other"}
     top_genre = max(genres, key=genres.get) if genres else None
 
     name = _NAMES[(obscurity, diversity)]
