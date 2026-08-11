@@ -35,7 +35,7 @@ def era_axis(median_year):
 _NAMES = {
     ("mainstream", "focused"): "Main Stage Loyalist",
     ("mainstream", "broad"): "Main Stage Completionist",
-    ("mainstream", "omnivore"): "Chart Omnivore",
+    ("mainstream", "omnivore"): "Main Stage Omnivore",
     ("balanced", "focused"): "Scene Regular",
     ("balanced", "broad"): "Crate Digger",
     ("balanced", "omnivore"): "Restless Listener",
