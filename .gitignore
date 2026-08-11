@@ -57,3 +57,6 @@ frontend/graph_data.json
 frontend/graph_data.json.bak
 frontend/graph_data.json.old
 frontend-v2/graph_data.json
+
+# Subagent-driven-development scratch (briefs, reports, review packages)
+.superpowers/
