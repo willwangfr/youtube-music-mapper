@@ -49,3 +49,32 @@ def test_exactly_at_threshold_is_not_flagged():
 def test_tags_exactly_at_trust_threshold_are_kept():
     entry = {"listeners": 5000, "tags": ["dubstep"]}
     assert trusted_tags(entry) == ["dubstep"]
+
+
+from artist_meta import resolve_genre
+
+
+def test_curated_map_wins():
+    entry = {"listeners": 900000, "tags": ["pop"]}
+    assert resolve_genre("Seven Lions", entry, {"Seven Lions": "Melodic Bass"}) == "Melodic Bass"
+
+
+def test_trusted_tags_are_used_when_curated_is_silent():
+    entry = {"listeners": 900000, "tags": ["dubstep", "electronic"]}
+    assert resolve_genre("Someone", entry, {}) == "Dubstep/Bass"
+
+
+def test_untrusted_tags_fall_through_to_other():
+    # 4981 listeners is below the trust threshold.
+    entry = {"listeners": 4981, "tags": ["dubstep"]}
+    assert resolve_genre("DubstepGutter", entry, {}) == "Other"
+
+
+def test_unmappable_tags_fall_through_to_other():
+    entry = {"listeners": 900000, "tags": ["seen live", "favourites"]}
+    assert resolve_genre("Someone", entry, {}) == "Other"
+
+
+def test_first_mappable_tag_wins():
+    entry = {"listeners": 900000, "tags": ["seen live", "k-pop", "pop"]}
+    assert resolve_genre("Someone", entry, {}) == "K-Pop"

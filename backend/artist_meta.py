@@ -45,3 +45,66 @@ def trusted_tags(entry: dict) -> list[str]:
     if listeners < TAG_TRUST_LISTENER_THRESHOLD:
         return []
     return list(entry.get("tags", []))
+
+
+# Last.fm tag to GENRE_VOCABULARY entry. Only unambiguous tags are mapped;
+# anything else falls through to "Other" rather than guessing.
+TAG_TO_GENRE = {
+    "ambient": "Ambient",
+    "bass house": "Bass House",
+    "classical": "Classical",
+    "folk": "Country/Folk",
+    "country": "Country/Folk",
+    "drum and bass": "Drum & Bass",
+    "dnb": "Drum & Bass",
+    "dubstep": "Dubstep/Bass",
+    "brostep": "Dubstep/Bass",
+    "riddim": "Dubstep/Bass",
+    "melodic dubstep": "Melodic Bass",
+    "future bass": "Future Bass",
+    "electronic": "Electronic",
+    "electronica": "Electronic",
+    "edm": "Electronic",
+    "eurodance": "Eurodance",
+    "funk": "Funk/Soul",
+    "soul": "Funk/Soul",
+    "hardstyle": "Hardstyle",
+    "hardcore": "Hardcore/Hardstyle",
+    "hip-hop": "Hip Hop",
+    "hip hop": "Hip Hop",
+    "rap": "Hip Hop",
+    "house": "House",
+    "progressive house": "Progressive House",
+    "tech house": "Tech House",
+    "techno": "Techno",
+    "trance": "Trance",
+    "hyperpop": "Hyperpop",
+    "indie": "Indie",
+    "j-pop": "J-Pop",
+    "jazz": "Jazz",
+    "k-pop": "K-Pop",
+    "lo-fi": "Lo-fi",
+    "lofi": "Lo-fi",
+    "pop": "Pop",
+    "rnb": "R&B",
+    "r&b": "R&B",
+    "reggaeton": "Reggaeton",
+    "rock": "Rock",
+    "classic rock": "Rock",
+    "metal": "Rock",
+    "synthwave": "Synthwave",
+    "trap": "Trap/Bass",
+    "soundtrack": "Soundtrack",
+    "world": "World Music",
+}
+
+
+def resolve_genre(name: str, entry: dict, curated: dict) -> str:
+    curated_genre = curated.get(name)
+    if curated_genre:
+        return curated_genre
+    for tag in trusted_tags(entry):
+        mapped = TAG_TO_GENRE.get(tag)
+        if mapped:
+            return mapped
+    return "Other"
