@@ -3,7 +3,6 @@ import pytest
 from enrich.lastfm_tags import GENRE_TAG_QUERIES, parse_top_artists
 
 
-@pytest.mark.xfail(reason="GENRE_VOCABULARY lands in Task 7; remove this marker there")
 def test_every_query_maps_to_a_known_genre():
     from taste_profile import GENRE_VOCABULARY
     assert set(GENRE_TAG_QUERIES).issubset(set(GENRE_VOCABULARY))

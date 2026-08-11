@@ -1,0 +1,104 @@
+import math
+import pytest
+
+from taste_profile import (
+    GENRE_VOCABULARY, artist_obscurity, library_obscurity,
+    genre_distribution, diversity_score, scene_relative_obscurity,
+)
+
+
+def test_vocabulary_has_51_entries():
+    assert len(GENRE_VOCABULARY) == 51
+    assert len(set(GENRE_VOCABULARY)) == 51
+
+
+def test_obscurity_floor_at_upper_bound():
+    assert artist_obscurity(10_000_000) == 0.0
+
+
+def test_obscurity_ceiling_at_lower_bound():
+    assert artist_obscurity(10) == 100.0
+
+
+def test_obscurity_clamps_beyond_bounds():
+    assert artist_obscurity(50_000_000) == 0.0
+    assert artist_obscurity(1) == 100.0
+
+
+def test_obscurity_is_monotonic():
+    assert artist_obscurity(1_000) > artist_obscurity(100_000) > artist_obscurity(5_000_000)
+
+
+def test_obscurity_midpoint_is_log_scaled():
+    # 10^4 listeners sits halfway between 10^1 and 10^7.
+    assert artist_obscurity(10_000) == pytest.approx(50.0)
+
+
+def test_obscurity_of_zero_listeners_is_none():
+    assert artist_obscurity(0) is None
+
+
+def test_library_obscurity_is_song_weighted():
+    meta = {
+        "Popular": {"listeners": 1_000_000, "tags": ["pop"]},
+        "Obscure": {"listeners": 1_000, "tags": ["indie"]},
+    }
+    heavy_on_popular = library_obscurity({"Popular": 99, "Obscure": 1}, meta)
+    heavy_on_obscure = library_obscurity({"Popular": 1, "Obscure": 99}, meta)
+    assert heavy_on_obscure > heavy_on_popular
+
+
+def test_library_obscurity_excludes_non_artists():
+    meta = {
+        "Real": {"listeners": 1_000_000, "tags": ["pop"]},
+        "Repost Channel": {"listeners": 169, "tags": []},
+    }
+    with_channel = library_obscurity({"Real": 10, "Repost Channel": 10}, meta)
+    without = library_obscurity({"Real": 10}, meta)
+    assert with_channel == without
+
+
+def test_library_obscurity_is_none_without_data():
+    assert library_obscurity({"Unknown": 5}, {}) is None
+
+
+def test_genre_distribution_is_song_weighted_and_normalised():
+    meta = {"A": {"genre": "Pop"}, "B": {"genre": "Rock"}}
+    dist = genre_distribution({"A": 30, "B": 10}, meta)
+    assert dist["Pop"] == pytest.approx(0.75)
+    assert dist["Rock"] == pytest.approx(0.25)
+    assert sum(dist.values()) == pytest.approx(1.0)
+
+
+def test_genre_distribution_defaults_unknown_to_other():
+    dist = genre_distribution({"A": 1}, {})
+    assert dist == {"Other": 1.0}
+
+
+def test_diversity_uses_the_fixed_vocabulary_not_genres_present():
+    # The old formula scored an even two-genre split as a perfect 1.0.
+    two_genres = diversity_score({"Pop": 0.5, "Rock": 0.5})
+    assert two_genres < 0.25
+    assert two_genres == pytest.approx(math.log(2) / math.log(51))
+
+
+def test_diversity_of_a_single_genre_is_zero():
+    assert diversity_score({"Pop": 1.0}) == 0.0
+
+
+def test_diversity_of_a_perfectly_even_library_is_one():
+    even = {g: 1 / 51 for g in GENRE_VOCABULARY}
+    assert diversity_score(even) == pytest.approx(1.0)
+
+
+def test_scene_relative_ranks_within_genre_population():
+    meta = {"Small": {"listeners": 5_000, "tags": ["dubstep"], "genre": "Dubstep/Bass"}}
+    reference = {"Dubstep/Bass": [1_000, 10_000, 100_000, 1_000_000]}
+    # One of four reference artists is smaller, so this sits at the 75th
+    # obscurity percentile within the scene.
+    assert scene_relative_obscurity({"Small": 1}, meta, reference) == pytest.approx(75.0)
+
+
+def test_scene_relative_is_none_without_a_reference():
+    meta = {"A": {"listeners": 5_000, "tags": ["x"], "genre": "Dubstep/Bass"}}
+    assert scene_relative_obscurity({"A": 1}, meta, {}) is None
