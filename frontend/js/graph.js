@@ -1258,6 +1258,20 @@ class MusicGraph {
         return this.nodes.reduce((sum, n) => sum + (n.song_count || 0), 0);
     }
 
+    toLibrary() {
+        const liked = [];
+        (this.nodes || []).forEach(node => {
+            (node.songs || []).forEach(song => {
+                liked.push({
+                    title: song.title,
+                    album: [',', '&', ''].includes(song.album) ? null : song.album,
+                    artists: [{ name: node.name }]
+                });
+            });
+        });
+        return { liked_songs: liked };
+    }
+
     animateStats(stats) {
         // Animated counter effect
         const animateValue = (element, start, end, duration) => {
@@ -2372,34 +2386,33 @@ window.addEventListener('load', () => {
 
 async function createAndShareProfile() {
     const name = prompt('Enter your display name (optional):') || '';
+    const optIn = confirm('List this profile on the public leaderboard?\n\nCancel keeps it link-only.');
+
+    const musicData = graph.toLibrary();
+    if (!musicData.liked_songs.length) {
+        alert('Load your music first.');
+        return;
+    }
 
     try {
         const response = await fetch('/api/profile/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, public: true })
+            body: JSON.stringify({ name, public: optIn, music_data: musicData })
         });
-
         const data = await response.json();
-
         if (data.error) {
             alert('Error: ' + data.error);
             return;
         }
-
-        // Save profile ID locally
         localStorage.setItem('myProfileId', data.id);
-
-        // Show share link
-        const shareUrl = window.location.origin + data.share_url;
+        const shareUrl = window.location.origin + '/p/' + data.id;
         const copied = await copyToClipboard(shareUrl);
-
         if (copied) {
-            alert(`Profile created! Share link copied to clipboard:\n\n${shareUrl}`);
+            alert(`Profile created! Share link copied:\n\n${shareUrl}`);
         } else {
             prompt('Profile created! Share this link:', shareUrl);
         }
-
     } catch (error) {
         alert('Error creating profile: ' + error.message);
     }

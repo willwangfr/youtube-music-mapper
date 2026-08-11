@@ -13,7 +13,7 @@ let groupId = null;
 let myProfileId = localStorage.getItem('myProfileId');
 
 // Determine mode from URL
-if (pathParts[0] === 'compare' && pathParts[1]) {
+if ((pathParts[0] === 'compare' || pathParts[0] === 'p') && pathParts[1]) {
     targetProfileId = pathParts[1];
     mode = 'compare';
 } else if (pathParts[0] === 'group' && pathParts[1]) {
@@ -49,43 +49,12 @@ async function init() {
 }
 
 async function loadComparisonWithCurrent(targetProfileId) {
-    const loading = document.getElementById('loading');
-    const result = document.getElementById('comparison-result');
-    const createSection = document.getElementById('create-profile-section');
-
-    try {
-        const response = await fetch(`/api/compare/with-current/${targetProfileId}`);
-        const data = await response.json();
-
-        if (data.error) {
-            // No local data, show create profile prompt
-            loading.style.display = 'none';
-            createSection.style.display = 'block';
-            createSection.innerHTML = `
-                <div class="compatibility-hero">
-                    <h2>Compare Your Music Taste</h2>
-                    <p style="color: #888; margin-top: 10px;">Create your profile to compare with this person</p>
-                    <div class="action-buttons">
-                        <button class="btn btn-primary" onclick="showCreateModal()">Create My Profile</button>
-                    </div>
-                </div>
-            `;
-            return;
-        }
-
-        loading.style.display = 'none';
-        result.style.display = 'block';
-        result.innerHTML = renderComparison(data);
-
-    } catch (error) {
-        loading.innerHTML = `
-            <p style="color: #e74c3c;">Error: ${error.message}</p>
-            <div class="action-buttons">
-                <button class="btn btn-secondary" onclick="showCreateModal()">Create Profile</button>
-                <a href="/" class="btn btn-primary">Back to Map</a>
-            </div>
-        `;
+    const myId = localStorage.getItem('myProfileId');
+    if (!myId) {
+        showCreateModal();
+        return;
     }
+    return loadComparison(myId, targetProfileId);
 }
 
 async function loadComparison(profile1Id, profile2Id) {
@@ -93,12 +62,7 @@ async function loadComparison(profile1Id, profile2Id) {
     const result = document.getElementById('comparison-result');
 
     try {
-        let endpoint = `/api/compare/${profile1Id}/${profile2Id}`;
-
-        // If comparing with current user's local data
-        if (profile1Id === 'current') {
-            endpoint = `/api/compare/with-current/${profile2Id}`;
-        }
+        const endpoint = `/api/compare/${profile1Id}/${profile2Id}`;
 
         const response = await fetch(endpoint);
         const data = await response.json();

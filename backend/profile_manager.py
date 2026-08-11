@@ -36,14 +36,14 @@ def generate_profile_id(music_data: dict, name: str = "") -> str:
     return full_hash[:8]
 
 
-def create_profile(music_data: dict, name: str = "", public: bool = True) -> dict:
+def create_profile(music_data: dict, name: str = "", public: bool = False) -> dict:
     """
     Create a new profile from music data.
 
     Args:
         music_data: User's music data (liked_songs, etc.)
         name: Optional display name
-        public: Whether profile appears in leaderboards
+        public: Whether the profile opts in to leaderboards (default off)
 
     Returns:
         Profile metadata including shareable ID
@@ -92,7 +92,7 @@ def create_profile(music_data: dict, name: str = "", public: bool = True) -> dic
         "id": profile_id,
         "name": profile["name"],
         "stats": profile["stats"],
-        "share_url": f"/compare/{profile_id}"
+        "share_url": f"/p/{profile_id}"
     }
 
 

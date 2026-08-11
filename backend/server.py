@@ -275,8 +275,10 @@ def load_genre_map():
 
 
 @app.route("/compare/<profile_id>")
+@app.route("/p/<profile_id>")
 def compare_page(profile_id):
-    """Serve the comparison page."""
+    """Serve the comparison page. /p/<id> is the current share-link path;
+    /compare/<id> stays live for leaderboard.html's existing links."""
     return send_from_directory(app.static_folder, "compare.html")
 
 
@@ -300,18 +302,12 @@ def api_create_profile():
     if not data:
         return jsonify({"error": "No data provided"}), 400
 
-    # Accept either direct music_data or use current user's data
     music_data = data.get("music_data")
     name = data.get("name", "")
-    public = data.get("public", True)
+    public = bool(data.get("public", False))
 
-    if not music_data:
-        # Try to use current user's music_data.json
-        if os.path.exists("music_data.json"):
-            with open("music_data.json") as f:
-                music_data = json.load(f)
-        else:
-            return jsonify({"error": "No music data provided or available"}), 400
+    if not music_data or not music_data.get("liked_songs"):
+        return jsonify({"error": "No music data provided"}), 400
 
     result = create_profile(music_data, name=name, public=public)
     return jsonify(result)
@@ -370,35 +366,6 @@ def api_compare_profiles(profile_id1, profile_id2):
     result["profile2"] = {
         "id": profile_id2,
         "name": profile2.get("name", "Unknown")
-    }
-
-    return jsonify(result)
-
-
-@app.route("/api/compare/with-current/<profile_id>")
-def api_compare_with_current(profile_id):
-    """Compare a profile with current user's music data."""
-    # Get target profile's music data
-    target_music_data = get_profile_music_data(profile_id)
-    if not target_music_data:
-        return jsonify({"error": "Profile not found"}), 404
-
-    # Get current user's music data
-    if not os.path.exists("music_data.json"):
-        return jsonify({"error": "No local music data. Create a profile first."}), 400
-
-    with open("music_data.json") as f:
-        current_music_data = json.load(f)
-
-    target_profile = get_profile(profile_id)
-    genre_map = load_genre_map()
-
-    result = calculate_similarity(current_music_data, target_music_data, genre_map)
-
-    result["profile1"] = {"id": "current", "name": "You"}
-    result["profile2"] = {
-        "id": profile_id,
-        "name": target_profile.get("name", "Unknown")
     }
 
     return jsonify(result)
