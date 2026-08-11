@@ -12,6 +12,9 @@ from profile_manager import (
     delete_profile, create_group, get_group, join_group, get_group_profiles, leave_group
 )
 from taste_similarity import calculate_similarity, calculate_group_similarity, compute_taste_vector
+from artist_meta import load_meta
+from taste_profile import build_profile_stats
+from archetype import resolve_archetype, compute_badges, MIN_PEERS_FOR_RELATIVE_RANKING
 import spotify_client
 import os
 import json
@@ -329,6 +332,45 @@ def api_get_profile_full(profile_id):
     if not profile:
         return jsonify({"error": "Profile not found"}), 404
     return jsonify(profile)
+
+
+def _load_json(path, default):
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
+@app.route("/api/profile/<profile_id>/stats")
+def api_profile_stats(profile_id):
+    profile = get_profile(profile_id, include_music_data=True)
+    if not profile:
+        return jsonify({"error": "Profile not found"}), 404
+
+    meta = load_meta()
+    years = _load_json("data/track_years.json", {})
+    reference = _load_json("data/genre_reference.json", {})
+    graph = _load_json("../frontend/graph_data.json", {"nodes": [], "links": []})
+
+    stats = build_profile_stats(profile["music_data"], meta, years, reference, graph)
+
+    peers = list_public_profiles(limit=500)
+    percentile = None
+    if len(peers) >= MIN_PEERS_FOR_RELATIVE_RANKING and stats["obscurity"] is not None:
+        scores = [p.get("stats", {}).get("obscurity") for p in peers]
+        scores = [s for s in scores if s is not None]
+        if scores:
+            below = sum(1 for s in scores if s < stats["obscurity"])
+            percentile = round(100.0 * below / len(scores), 1)
+
+    return jsonify({
+        "profile": {"id": profile["id"], "name": profile["name"]},
+        "stats": stats,
+        "archetype": resolve_archetype(stats),
+        "badges": compute_badges(stats),
+        "peer_percentile": percentile,
+    })
 
 
 @app.route("/api/profile/<profile_id>", methods=["DELETE"])
