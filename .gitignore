@@ -60,3 +60,9 @@ frontend-v2/graph_data.json
 
 # Subagent-driven-development scratch (briefs, reports, review packages)
 .superpowers/
+
+# Screenshots — previous ones captured full desktops with personal data.
+*.png
+
+# Regenerable image-URL cache (rebuild: python fetch_artist_images.py)
+backend/artist_images.json
