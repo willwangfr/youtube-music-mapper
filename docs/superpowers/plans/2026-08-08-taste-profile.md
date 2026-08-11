@@ -613,18 +613,39 @@ GENRE_TAG_QUERIES = {
 }
 
 
+class LastfmError(RuntimeError):
+    """Last.fm reports failures as a 200 with an error envelope."""
+
+
 def parse_top_artists(payload: dict) -> list[int]:
+    if "error" in payload:
+        raise LastfmError(str(payload.get("message", payload["error"]))[:120])
+    if "topartists" not in payload:
+        raise LastfmError("no topartists in response")
     artists = (payload.get("topartists", {}) or {}).get("artist", []) or []
     counts = [int(a.get("listeners", 0) or 0) for a in artists]
     return sorted((c for c in counts if c > 0), reverse=True)
+
+
+def _save(reference: dict) -> None:
+    """Atomic, so an interrupt cannot leave a half-written store behind."""
+    DATA_DIR.mkdir(exist_ok=True)
+    tmp = REFERENCE_PATH.with_suffix(".json.tmp")
+    with open(tmp, "w") as f:
+        json.dump(reference, f)
+    tmp.replace(REFERENCE_PATH)
 
 
 def build_reference(api_key: str, limit: int = 500) -> dict:
     throttle = _Throttle(REQUESTS_PER_SECOND)
     reference = {}
     if REFERENCE_PATH.exists():
-        with open(REFERENCE_PATH) as f:
-            reference = json.load(f)
+        try:
+            with open(REFERENCE_PATH) as f:
+                reference = json.load(f)
+        except ValueError:
+            # A corrupt store is worth rebuilding, not crashing over.
+            print("  genre_reference.json unreadable; rebuilding", flush=True)
 
     for genre, tag in GENRE_TAG_QUERIES.items():
         if genre in reference:
@@ -637,13 +658,14 @@ def build_reference(api_key: str, limit: int = 500) -> dict:
                         "api_key": api_key, "format": "json", "limit": limit},
                 timeout=15,
             )
-            reference[genre] = parse_top_artists(response.json())
+            response.raise_for_status()
+            top = parse_top_artists(response.json())
         except Exception as exc:
+            # Left absent rather than cached, so the next run retries it.
             print(f"  {genre}: {exc}", flush=True)
             continue
-        DATA_DIR.mkdir(exist_ok=True)
-        with open(REFERENCE_PATH, "w") as f:
-            json.dump(reference, f)
+        reference[genre] = top
+        _save(reference)
 
     return reference
 ```
