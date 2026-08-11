@@ -78,3 +78,25 @@ def test_unmappable_tags_fall_through_to_other():
 def test_first_mappable_tag_wins():
     entry = {"listeners": 900000, "tags": ["seen live", "k-pop", "pop"]}
     assert resolve_genre("Someone", entry, {}) == "K-Pop"
+
+
+def test_curated_alias_maps_into_the_vocabulary():
+    from taste_profile import GENRE_VOCABULARY
+    resolved = resolve_genre("X", {"listeners": 9, "tags": []}, {"X": "Rock/Metal"})
+    assert resolved == "Rock"
+    assert resolved in GENRE_VOCABULARY
+
+
+def test_unknown_curated_label_falls_through_to_other():
+    assert resolve_genre("X", {"listeners": 9, "tags": []}, {"X": "Zzz Not A Genre"}) == "Other"
+
+
+def test_unknown_curated_label_still_lets_tags_win():
+    entry = {"listeners": 900000, "tags": ["dubstep"]}
+    assert resolve_genre("X", entry, {"X": "Zzz Not A Genre"}) == "Dubstep/Bass"
+
+
+def test_every_curated_alias_target_is_in_the_vocabulary():
+    from artist_meta import CURATED_ALIASES
+    from taste_profile import GENRE_VOCABULARY
+    assert set(CURATED_ALIASES.values()) <= set(GENRE_VOCABULARY)
