@@ -278,11 +278,16 @@ def load_genre_map():
 
 
 @app.route("/compare/<profile_id>")
-@app.route("/p/<profile_id>")
 def compare_page(profile_id):
-    """Serve the comparison page. /p/<id> is the current share-link path;
-    /compare/<id> stays live for leaderboard.html's existing links."""
+    """Serve the comparison page. Stays live for leaderboard.html's
+    existing links; the share-link path moved to /p/<id> (profile_page)."""
     return send_from_directory(app.static_folder, "compare.html")
+
+
+@app.route("/p/<profile_id>")
+def profile_page(profile_id):
+    """Serve the taste-profile page. This is the current share-link path."""
+    return send_from_directory(app.static_folder, "profile.html")
 
 
 @app.route("/group/<group_id>")

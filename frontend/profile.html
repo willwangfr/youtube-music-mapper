@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Taste Profile</title>
+    <link rel="stylesheet" href="/css/styles.css?v=122">
+    <style>
+        body {
+            overflow: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="profile-page">
+        <header class="profile-hero">
+            <div class="profile-archetype" id="archetypeName">Loading…</div>
+            <div class="profile-tagline" id="archetypeTagline"></div>
+            <div class="profile-owner" id="profileName"></div>
+            <div class="profile-badges" id="badges"></div>
+        </header>
+
+        <section class="profile-stats" id="headlineStats"></section>
+        <section class="profile-section" id="obscuritySection" hidden></section>
+        <section class="profile-section" id="genreSection" hidden></section>
+        <section class="profile-section" id="clusterSection" hidden></section>
+        <section class="profile-section" id="eraSection" hidden></section>
+        <section class="profile-section" id="moodSection" hidden></section>
+        <section class="profile-section" id="topArtistSection" hidden></section>
+
+        <footer class="profile-footer">
+            <a class="btn btn-secondary" href="/">Open the map</a>
+            <button class="btn btn-secondary" id="copyLink">Copy share link</button>
+            <button class="btn btn-danger" id="deleteProfile">Delete this profile</button>
+        </footer>
+    </div>
+    <script src="/js/profile.js?v=1"></script>
+</body>
+</html>
