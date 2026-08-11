@@ -43,7 +43,7 @@ async function load() {
     el('headlineStats').innerHTML = `
         <div class="stat-tile"><span>${stats.artist_count}</span><label>Artists</label></div>
         <div class="stat-tile"><span>${stats.song_count}</span><label>Songs</label></div>
-        <div class="stat-tile"><span>${Math.round(stats.diversity * 100)}</span><label>Diversity</label></div>`;
+        <div class="stat-tile"><span>${Math.round(stats.diversity * 100)}<small>/100</small></span><label>Diversity</label></div>`;
 
     // stats carries three song populations that legitimately disagree
     // (song_count, the year_coverage denominator, and artist-song
@@ -64,9 +64,21 @@ async function load() {
         section(el('obscuritySection'), 'Obscurity', html);
     }
 
-    const genres = Object.entries(stats.genres).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    // "Other" is artists whose genre could not be resolved — the absence of
+    // a genre, not a genre itself — so it must not be ranked among the real
+    // ones. Dropping it silently would leave the shown bars summing to less
+    // than 100%, which is its own kind of misleading, so its share is
+    // reported separately instead.
+    const all = Object.entries(stats.genres).sort((a, b) => b[1] - a[1]);
+    const genres = all.filter(([name]) => name !== 'Other');
+    const unresolved = stats.genres['Other'] || 0;
     if (genres.length) {
-        section(el('genreSection'), 'Genres', bars(genres, 1));
+        let html = bars(genres.slice(0, 10), 1);
+        if (unresolved > 0.01) {
+            html += `<p class="muted">${pct(unresolved)} of your library could not be
+                     matched to a genre and is not shown above.</p>`;
+        }
+        section(el('genreSection'), 'Genres', html);
     }
 
     if (stats.clusters.length) {
