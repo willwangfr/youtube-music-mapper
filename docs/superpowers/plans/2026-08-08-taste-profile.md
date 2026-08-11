@@ -974,7 +974,8 @@ print('Seven Lions:', counts['Seven Lions'])
 "
 ```
 
-Expected: `3039 songs; 1157 artists` and `Seven Lions: 95`
+Expected: `3039 songs; 1156 artists` and `Seven Lions: 95`. (1,156 not 1,157: the node
+`The Foundations` has an empty `songs` list, so it contributes no artist credits.)
 
 - [ ] **Step 6: Commit**
 
