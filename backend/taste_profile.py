@@ -192,10 +192,24 @@ def _gini(values: list) -> float:
 
 def build_profile_stats(library: dict, meta: dict, years: dict,
                         reference: dict, graph: dict) -> dict:
+    """Assemble every metric the profile page and archetype rules consume.
+
+    Three different song totals appear here and they legitimately disagree:
+
+      song_count      raw entries in liked_songs (3039 on the reference library)
+      year_coverage   fraction of UNIQUE (artist, title) pairs with a known year,
+                      a ~10% smaller population because it dedups repeats
+      one_song_share / gini / top_artists / largest_artist_songs
+                      derived from artist-song appearances, a ~6% larger
+                      population because a collaboration is credited to each
+                      constituent artist
+
+    Anything rendering these must label them accordingly — "share of your
+    tracks" is not interchangeable with "share of your songs" here.
+    """
     counts = artist_song_counts(library)
     genres = genre_distribution(counts, meta)
     eras = decade_distribution(library, years)
-    song_total = sum(counts.values())
     one_song = sum(1 for c in counts.values() if c <= 1)
 
     return {

@@ -169,6 +169,22 @@ def test_small_clusters_are_dropped():
     assert taste_clusters(graph, {"A": 1, "B": 1}, {}, min_size=3) == []
 
 
+def test_clusters_accept_d3_object_links():
+    # After D3 runs its force simulation it replaces link endpoints with node
+    # objects, so both shapes reach us depending on where the graph came from.
+    graph = {
+        "nodes": [{"name": n} for n in ["A", "B", "C"]],
+        "links": [
+            {"source": {"id": "A"}, "target": {"id": "B"}},
+            {"source": "B", "target": {"id": "C"}},
+        ],
+    }
+    counts = {n: 1 for n in "ABC"}
+    clusters = taste_clusters(graph, counts, {}, min_size=3)
+    assert len(clusters) == 1
+    assert clusters[0]["size"] == 3
+
+
 def test_build_profile_stats_has_every_documented_key():
     graph = {"nodes": [{"name": "A", "song_count": 2, "songs": [{"title": "x"}, {"title": "y"}]}],
              "links": []}
